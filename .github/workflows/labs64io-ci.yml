@@ -1,0 +1,33 @@
+name: Labs64.IO - Commons - CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  java:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Test auth-context-java
+        run: cd auth-context-java && mvn -B -ntp test
+
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Test auth-context-python
+        run: |
+          cd auth-context-python
+          pip install -q -e ".[dev]"
+          pytest -q
