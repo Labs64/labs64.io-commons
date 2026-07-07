@@ -11,7 +11,7 @@ import io.labs64.authcontext.AuthHeaders;
 
 /**
  * Propagates the bound auth context on in-cluster, on-behalf-of calls
- * (RFC-03 service-to-service): the callee authorizes against the original
+ * (service-to-service): the callee authorizes against the original
  * user. Register on the service's RestClient/RestTemplate builder.
  */
 public class AuthContextPropagationInterceptor implements ClientHttpRequestInterceptor {

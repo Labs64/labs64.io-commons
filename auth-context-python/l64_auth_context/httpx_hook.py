@@ -1,4 +1,4 @@
-"""Outbound propagation for on-behalf-of calls (RFC-03 service-to-service).
+"""Outbound propagation for on-behalf-of calls (service-to-service).
 
 Usable as an httpx event hook::
 

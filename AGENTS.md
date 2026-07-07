@@ -4,12 +4,12 @@ Guidance for AI agents working in this repository. Read this before making chang
 
 ## What this is
 
-Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the RFC-03 auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract.
+Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract.
 
 ## Critical guardrails
 
 1. **The two implementations must stay behaviorally identical.** Any behavior change MUST update `test-vectors/auth-context-vectors.json` and BOTH implementations in the same commit. The vectors are the contract; code follows.
-2. **The header contract is owned by RFC-03** (`labs64.io-docs-internal/rfc/`). Do not add, rename or reinterpret `X-Auth-*` headers here without an RFC change.
+2. **The header contract is owned by the auth gateway** (`labs64.io-gateway/traefik-authproxy/`). Do not add, rename or reinterpret `X-Auth-*` headers here without an RFC change.
 3. **No Spring Security dependency in the Java starter.** The whole point is header-trust without an in-app security stack.
 4. **No mandatory runtime dependencies in the Python package.** FastAPI/httpx integrations import lazily; the core must stay dependency-free.
 5. **Fail closed.** Non-public paths without a valid user identity return 401. Never weaken this default.

@@ -11,7 +11,7 @@ Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io)
 | [`l64-auth-context-spring-boot-starter`](auth-context-java/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireRole`, outbound propagation, `@WithUserContext` test support |
 | [`l64-auth-context`](auth-context-python/) | Python 3.13+ | Mirrored `UserContext`, ASGI middleware, FastAPI dependencies, httpx propagation hook, pytest fixture |
 
-Both implementations obey RFC-03's trusted header contract (`X-Auth-User`, `X-Auth-Roles`, `X-Auth-Tenant`, `X-Request-ID`) and are pinned to identical behavior by the shared vectors in [`test-vectors/`](test-vectors/).
+Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Roles`, `X-Auth-Tenant`, `X-Request-ID`) and are pinned to identical behavior by the shared vectors in [`test-vectors/`](test-vectors/).
 
 ## Consuming
 
@@ -50,5 +50,5 @@ Local Java consumption without JitPack: `just install-java` installs `0.1.0` int
 
 ## Related
 
-- RFC-03 — Centralized authentication & authorization gateway (`labs64.io-docs-internal`)
+- Centralized authentication & authorization gateway (`labs64.io-gateway/traefik-authproxy`)
 - [`labs64.io-gateway`](https://github.com/Labs64/labs64.io-gateway) — traefik-authproxy, the header contract's producer

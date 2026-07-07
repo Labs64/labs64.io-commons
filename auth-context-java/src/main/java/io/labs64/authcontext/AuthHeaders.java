@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * The trusted header contract emitted by the auth gateway (ACS) per RFC-03.
+ * The trusted header contract emitted by the auth gateway (ACS).
  * Values are re-validated here as defense in depth; the ACS sanitizes with the
  * same pattern before emission.
  */

@@ -1,5 +1,5 @@
 {
-  "description": "Canonical behavior vectors for the l64-auth-context libraries (Java + Python). Both implementations MUST pass every case. Contract: RFC-03 'Trusted header contract' in labs64.io-docs-internal.",
+  "description": "Canonical behavior vectors for the l64-auth-context libraries (Java + Python). Both implementations MUST pass every case. Contract: trusted header contract in labs64.io-gateway.",
   "headers": {
     "user": "X-Auth-User",
     "roles": "X-Auth-Roles",

@@ -1,4 +1,4 @@
-"""Trusted gateway auth-context contract (RFC-03) — mirror of the Java library.
+"""Trusted gateway auth-context contract — mirror of the Java library.
 
 Behavior is pinned by the shared vectors in test-vectors/auth-context-vectors.json;
 a change here must update the vectors and the Java implementation together.

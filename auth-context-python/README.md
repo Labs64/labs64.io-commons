@@ -1,6 +1,6 @@
 # l64-auth-context
 
-Trusted gateway auth-context (`X-Auth-*`) parsing, enforcement and propagation for Labs64.IO Python services (RFC-03).
+Trusted gateway auth-context (`X-Auth-*`) parsing, enforcement and propagation for Labs64.IO Python services.
 
 Mirror of `l64-auth-context-spring-boot-starter`; behavior is pinned by the shared vectors in `../test-vectors/`.
 
