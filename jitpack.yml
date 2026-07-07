@@ -1,4 +1,4 @@
 jdk:
   - openjdk21
 install:
-  - cd auth-context-java && mvn -B -ntp -DskipTests install
+  - curl -sL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar xz -C /opt && export PATH=/opt/apache-maven-3.9.9/bin:$PATH && cd auth-context-java && mvn -B -ntp -DskipTests install
