@@ -9,24 +9,23 @@ on:
 
 jobs:
   release:
-    name: Release ${{ github.event.inputs.release-version }} / Java 17
-    runs-on: ubuntu-latest
+    name: Release ${{ github.event.inputs.release-version }}
+    runs-on: self-hosted
     env:
       RELEASE_WORK_DIR: checkout-for-release
+    container: maven:3-eclipse-temurin-17
 
     steps:
+    - name: Install required tooling
+      run: |
+        apt-get update
+        apt-get install -y ssh
+
     - name: Checkout the sources
       uses: actions/checkout@v4
       with:
         path: ${{ env.RELEASE_WORK_DIR }}
         ssh-key: '${{ secrets.REPO_SSH_KEY }}'
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
 
     - name: Prepare git config
       run: |
@@ -43,33 +42,23 @@ jobs:
           <servers>
             <server>
               <id>labs64-nexus</id>
-              <username>\${{ secrets.NEXUS_USER }}</username>
-              <password>\${{ secrets.NEXUS_PASS }}</password>
-            </server>
-            <server>
-              <id>ossrh</id>
-              <username>\${{ secrets.OSS_USER }}</username>
-              <password>\${{ secrets.OSS_PASS }}</password>
+              <username>${{ secrets.NEXUS_USER }}</username>
+              <password>${{ secrets.NEXUS_PASS }}</password>
             </server>
           </servers>
         </settings>
         EOF
-
-    - name: Import GPG key
-      run: echo "${{ secrets.GPG_KEY }}" | base64 -d | gpg --pinentry-mode loopback --passphrase "${{ secrets.GPG_KEY_PASS }}" --import
 
     - name: Set Release Version
       run: |
         cd ${{ env.RELEASE_WORK_DIR }}/auth-context-java
         mvn versions:set -DnewVersion=${{ github.event.inputs.release-version }} -DgenerateBackupPoms=false
 
-    - name: Release to Maven Central staging and Nexus
+    - name: Deploy to Labs64 Nexus
       run: |
         cd ${{ env.RELEASE_WORK_DIR }}/auth-context-java
         mvn -s ~/.m2/settings.xml -B \
-            clean deploy \
-            -P release \
-            -Dgpg.passphrase=${{ secrets.GPG_KEY_PASS }}
+            clean deploy
 
     - name: Commit and tag version bump
       run: |
