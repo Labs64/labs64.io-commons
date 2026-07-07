@@ -103,6 +103,15 @@
                     <release>${java.version}</release>
                 </configuration>
             </plugin>
+            <!-- The spring-boot-starter-parent manages this to a version requiring
+                 Maven >= 3.6.3; pin down to stay buildable on older build hosts (e.g.
+                 JitPack's bundled Maven, which predates 3.6.3). No filtering/special
+                 resource handling here, so any 3.x resources-plugin is equivalent. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+            </plugin>
         </plugins>
     </build>
     <profiles>
