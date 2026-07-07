@@ -15,20 +15,15 @@ Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Ro
 
 ## Consuming
 
-**Java (via [JitPack](https://jitpack.io)):**
+**Java:**
+
+Published to Labs64 Nexus. Ensure your `settings.xml` or CI environment is configured to resolve from the Labs64 Maven repositories.
 
 ```xml
-<repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
-
 <dependency>
-    <groupId>com.github.Labs64.labs64.io-commons</groupId>
+    <groupId>io.labs64</groupId>
     <artifactId>l64-auth-context-spring-boot-starter</artifactId>
-    <version>COMMIT_OR_TAG</version>
+    <version>0.1.0</version>
 </dependency>
 ```
 
@@ -46,7 +41,7 @@ just java    # Java only
 just python  # Python only
 ```
 
-Local Java consumption without JitPack: `just install-java` installs `0.1.0` into the local Maven repository.
+Local Java consumption: `just install-java` installs `0.1.0` into the local Maven repository.
 
 ## Related
 

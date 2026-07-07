@@ -22,7 +22,6 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 | `auth-context-java/` | `io.labs64:l64-auth-context-spring-boot-starter` |
 | `auth-context-python/` | `l64-auth-context` (package `l64_auth_context`) |
 | `test-vectors/` | Canonical cross-language behavior vectors |
-| `jitpack.yml` | JitPack build (Java consumption without a registry) |
 
 ## Commands
 
@@ -37,4 +36,4 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 
 - Java 17 bytecode target (consumers run 17+), Spring Boot 4.x parent.
 - Python ≥ 3.13, no runtime deps, `pyproject.toml` packaging.
-- Versioning: bump both libraries together; consumers pin a git tag/commit (JitPack / git+https).
+- Versioning: bump both libraries together; consumers consume from Labs64 Nexus and git+https.
