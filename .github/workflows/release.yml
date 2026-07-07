@@ -49,6 +49,9 @@ jobs:
         </settings>
         EOF
 
+    - name: Import GPG key
+      run: echo "${{ secrets.GPG_KEY }}" | base64 -d | gpg --pinentry-mode loopback --passphrase "${{ secrets.GPG_KEY_PASS }}" --import
+
     - name: Set Release Version
       run: |
         cd ${{ env.RELEASE_WORK_DIR }}/auth-context-java
@@ -58,13 +61,15 @@ jobs:
       run: |
         cd ${{ env.RELEASE_WORK_DIR }}/auth-context-java
         mvn -s ~/.m2/settings.xml -B \
-            clean deploy
+            clean deploy \
+            -P release \
+            -Dgpg.passphrase=${{ secrets.GPG_KEY_PASS }}
 
     - name: Commit and tag version bump
       run: |
         cd ${{ env.RELEASE_WORK_DIR }}
         git add auth-context-java/pom.xml
-        git commit -m "chore: bump version to ${{ github.event.inputs.release-version }}"
-        git tag -a v${{ github.event.inputs.release-version }} -m "Release ${{ github.event.inputs.release-version }}"
-        git push origin main
+        git diff-index --quiet HEAD || git commit -m "chore: bump version to ${{ github.event.inputs.release-version }}"
+        git tag -a v${{ github.event.inputs.release-version }} -m "Release ${{ github.event.inputs.release-version }}" || true
+        git push origin master
         git push origin v${{ github.event.inputs.release-version }}
