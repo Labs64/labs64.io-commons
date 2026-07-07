@@ -1,4 +1,0 @@
-jdk:
-  - openjdk21
-install:
-  - cd auth-context-java && mvn -B -ntp -DskipTests install
