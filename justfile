@@ -9,11 +9,11 @@ build: java python
 
 # build + test the Java starter
 java:
-    cd auth-context-java && mvn -B -ntp test
+    cd auth-context-java && mvn -B -ntp clean test
 
 # install the Java starter into the local Maven repository
 install-java:
-    cd auth-context-java && mvn -B -ntp -DskipTests install
+    cd auth-context-java && mvn -B -ntp -DskipTests clean install
 
 # create the Python venv with dev dependencies
 python-venv:
