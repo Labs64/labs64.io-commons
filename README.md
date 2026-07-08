@@ -8,8 +8,8 @@ Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io)
 
 | Library | Language | Purpose |
 |---|---|---|
-| [`l64-auth-context-spring-boot-starter`](auth-context-java/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireRole`, outbound propagation, `@WithUserContext` test support |
-| [`l64-auth-context`](auth-context-python/) | Python 3.13+ | Mirrored `UserContext`, ASGI middleware, FastAPI dependencies, httpx propagation hook, pytest fixture |
+| [`auth-context-spring-boot-starter`](auth-context-java/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireRole`, outbound propagation, `@WithUserContext` test support |
+| [`auth-context-python`](auth-context-python/) | Python 3.13+ | Mirrored `UserContext`, ASGI middleware, FastAPI dependencies, httpx propagation hook, pytest fixture |
 
 Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Roles`, `X-Auth-Tenant`, `X-Request-ID`) and are pinned to identical behavior by the shared vectors in [`test-vectors/`](test-vectors/).
 
@@ -22,7 +22,7 @@ Published to Labs64 Nexus. Ensure your `settings.xml` or CI environment is confi
 ```xml
 <dependency>
     <groupId>io.labs64</groupId>
-    <artifactId>l64-auth-context-spring-boot-starter</artifactId>
+    <artifactId>auth-context-spring-boot-starter</artifactId>
     <version>0.1.0</version>
 </dependency>
 ```
@@ -30,7 +30,7 @@ Published to Labs64 Nexus. Ensure your `settings.xml` or CI environment is confi
 **Python:**
 
 ```bash
-pip install "l64-auth-context @ git+https://github.com/Labs64/labs64.io-commons.git@COMMIT_OR_TAG#subdirectory=auth-context-python"
+pip install "auth-context-python @ git+https://github.com/Labs64/labs64.io-commons.git@COMMIT_OR_TAG#subdirectory=auth-context-python"
 ```
 
 ## Development

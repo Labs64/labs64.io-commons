@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "l64-auth-context"
+name = "auth-context-python"
 version = "0.1.0"
 description = "Trusted gateway auth-context (X-Auth-*) parsing, enforcement and propagation for Labs64.IO Python services"
 readme = "README.md"
@@ -19,4 +19,4 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["l64_auth_context*"]
+include = ["auth_context*"]

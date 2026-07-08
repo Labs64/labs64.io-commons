@@ -1,4 +1,4 @@
-name: l64-auth-context - Release
+name: Labs64.IO - Commons - Release
 
 on:
   workflow_dispatch:

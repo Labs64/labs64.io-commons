@@ -1,5 +1,5 @@
-from l64_auth_context import current_context, require_context
-from l64_auth_context.testing import set_user_context
+from auth_context import current_context, require_context
+from auth_context.testing import set_user_context
 
 
 def test_set_user_context_binds_and_resets():

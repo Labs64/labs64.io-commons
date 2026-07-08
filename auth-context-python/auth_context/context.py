@@ -44,7 +44,7 @@ class UserContext:
         return self.user_id.startswith(SERVICE_PRINCIPAL_PREFIX)
 
 
-_current: ContextVar[UserContext | None] = ContextVar("l64_auth_context", default=None)
+_current: ContextVar[UserContext | None] = ContextVar("auth_context", default=None)
 
 
 def current_context() -> UserContext | None:

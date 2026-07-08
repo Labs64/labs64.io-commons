@@ -19,8 +19,8 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 
 | Path | What |
 |---|---|
-| `auth-context-java/` | `io.labs64:l64-auth-context-spring-boot-starter` |
-| `auth-context-python/` | `l64-auth-context` (package `l64_auth_context`) |
+| `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` |
+| `auth-context-python/` | `auth-context-python` (package `auth_context`) |
 | `test-vectors/` | Canonical cross-language behavior vectors |
 
 ## Commands

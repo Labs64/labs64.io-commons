@@ -1,8 +1,8 @@
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from l64_auth_context import AuthContextMiddleware, UserContext
-from l64_auth_context.fastapi_deps import current_user, require_roles
+from auth_context import AuthContextMiddleware, UserContext
+from auth_context.fastapi_deps import current_user, require_roles
 
 FULL_CONTEXT = {
     "X-Auth-User": "jdoe",

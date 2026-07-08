@@ -1,7 +1,7 @@
 import httpx
 
-from l64_auth_context.httpx_hook import propagate_auth_context
-from l64_auth_context.testing import set_user_context
+from auth_context.httpx_hook import propagate_auth_context
+from auth_context.testing import set_user_context
 
 
 def test_propagates_all_contract_headers():

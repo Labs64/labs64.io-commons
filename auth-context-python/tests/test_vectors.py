@@ -11,7 +11,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from l64_auth_context import AuthContextMiddleware, current_context
+from auth_context import AuthContextMiddleware, current_context
 
 VECTORS = json.loads(
     (Path(__file__).resolve().parents[2] / "test-vectors" / "auth-context-vectors.json").read_text()
