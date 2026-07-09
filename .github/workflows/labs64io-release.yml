@@ -1,5 +1,13 @@
 name: Labs64.IO - Commons - Release
 
+# Releases the Java auth-context library to BOTH:
+#   * Labs64 Nexus   (server id: labs64-nexus  <- L64_PUB_CI_USERNAME / L64_PUB_CI_PASSWORD)
+#   * Maven Central  (server id: ossrh         <- OSS_USER / OSS_PASS)
+# Artifacts are GPG-signed with GPG_KEY / GPG_KEY_PASS.
+#
+# The Python library (auth-context-python) is consumed via git+https and is not
+# published to a package index here.
+
 on:
   workflow_dispatch:
     inputs:
@@ -7,69 +15,111 @@ on:
         required: true
         description: The release version X.Y.Z
 
+permissions:
+  contents: write
+
 jobs:
   release:
     name: Release ${{ github.event.inputs.release-version }}
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
+
     env:
-      RELEASE_WORK_DIR: checkout-for-release
-    container: maven:3-eclipse-temurin-17
+      # Bind the dispatch input to an env var once, then reference "$RELEASE_VERSION"
+      # in shell — never interpolate the raw ${{ ... }} expression into a run: script.
+      RELEASE_VERSION: ${{ github.event.inputs.release-version }}
 
     steps:
-    - name: Install required tooling
-      run: |
-        apt-get update
-        apt-get install -y ssh
+      - name: Validate release version
+        run: |
+          if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid release version '$RELEASE_VERSION' (expected X.Y.Z)"
+            exit 1
+          fi
 
-    - name: Checkout the sources
-      uses: actions/checkout@v4
-      with:
-        path: ${{ env.RELEASE_WORK_DIR }}
-        ssh-key: '${{ secrets.REPO_SSH_KEY }}'
+      - name: Checkout the sources
+        uses: actions/checkout@v4
 
-    - name: Prepare git config
-      run: |
-        cd ${{ env.RELEASE_WORK_DIR }}
-        git config user.name "GitHub Actions Bot"
-        git config user.email "netlicensing@labs64.com"
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
 
-    - name: Prepare maven settings.xml
-      run: |
-        mkdir -p ~/.m2
-        cat << EOF >~/.m2/settings.xml
-        <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                  xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
-          <servers>
-            <server>
-              <id>labs64-nexus</id>
-              <username>${{ secrets.NEXUS_USER }}</username>
-              <password>${{ secrets.NEXUS_PASS }}</password>
-            </server>
-          </servers>
-        </settings>
-        EOF
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "netlicensing@labs64.com"
 
-    - name: Import GPG key
-      run: echo "${{ secrets.GPG_KEY }}" | base64 -d | gpg --pinentry-mode loopback --passphrase "${{ secrets.GPG_KEY_PASS }}" --import
+      # settings.xml references credentials by env-var placeholder (${env.NAME}); the
+      # real values are injected per-deploy-step below, never written to disk.
+      - name: Prepare Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<'EOF'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+            <servers>
+              <!-- Labs64 Nexus (releases + snapshots share one credential) -->
+              <server>
+                <id>labs64-nexus</id>
+                <username>${env.L64_PUB_CI_USERNAME}</username>
+                <password>${env.L64_PUB_CI_PASSWORD}</password>
+              </server>
+              <server>
+                <id>labs64-nexus-snapshots</id>
+                <username>${env.L64_PUB_CI_USERNAME}</username>
+                <password>${env.L64_PUB_CI_PASSWORD}</password>
+              </server>
+              <!-- Sonatype Central Portal -->
+              <server>
+                <id>ossrh</id>
+                <username>${env.OSS_USER}</username>
+                <password>${env.OSS_PASS}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
 
-    - name: Set Release Version
-      run: |
-        cd ${{ env.RELEASE_WORK_DIR }}/auth-context-java
-        mvn versions:set -DnewVersion=${{ github.event.inputs.release-version }} -DgenerateBackupPoms=false
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.GPG_KEY }}" | base64 -d | \
+            gpg --batch --pinentry-mode loopback --passphrase "${{ secrets.GPG_KEY_PASS }}" --import
 
-    - name: Deploy to Labs64 Nexus
-      run: |
-        cd ${{ env.RELEASE_WORK_DIR }}/auth-context-java
-        mvn -s ~/.m2/settings.xml -B \
+      - name: Set release version
+        working-directory: auth-context-java
+        run: mvn -B -ntp versions:set -DnewVersion="$RELEASE_VERSION" -DgenerateBackupPoms=false
+
+      # Nexus: default maven-deploy-plugin honours <distributionManagement> (labs64-nexus).
+      - name: Deploy to Labs64 Nexus
+        working-directory: auth-context-java
+        env:
+          L64_PUB_CI_USERNAME: ${{ secrets.L64_PUB_CI_USERNAME }}
+          L64_PUB_CI_PASSWORD: ${{ secrets.L64_PUB_CI_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_KEY_PASS }}
+        run: |
+          mvn -B -ntp -s ~/.m2/settings.xml \
             clean deploy \
-            -P release \
-            -Dgpg.passphrase=${{ secrets.GPG_KEY_PASS }}
+            -P release
 
-    - name: Commit and tag version bump
-      run: |
-        cd ${{ env.RELEASE_WORK_DIR }}
-        git add auth-context-java/pom.xml
-        git diff-index --quiet HEAD || git commit -m "chore: bump version to ${{ github.event.inputs.release-version }}"
-        git tag -a v${{ github.event.inputs.release-version }} -m "Release ${{ github.event.inputs.release-version }}" || true
-        git push origin master
-        git push origin v${{ github.event.inputs.release-version }}
+      # Maven Central: the `central` profile's central-publishing-maven-plugin takes
+      # over the deploy phase (extensions=true), so this does not re-push to Nexus.
+      - name: Publish to Maven Central
+        working-directory: auth-context-java
+        env:
+          OSS_USER: ${{ secrets.OSS_USER }}
+          OSS_PASS: ${{ secrets.OSS_PASS }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_KEY_PASS }}
+        run: |
+          mvn -B -ntp -s ~/.m2/settings.xml \
+            clean deploy \
+            -P release,central
+
+      - name: Commit and tag version bump
+        run: |
+          git add auth-context-java/pom.xml
+          git diff-index --quiet HEAD || git commit -m "chore: release auth-context ${RELEASE_VERSION}"
+          git tag -a "v${RELEASE_VERSION}" -m "Release ${RELEASE_VERSION}" || true
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "v${RELEASE_VERSION}"

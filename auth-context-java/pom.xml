@@ -154,6 +154,20 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!--
+          Maven Central publishing via the Sonatype Central Portal. Activated on top
+          of `release` (mvn -P release,central deploy). With extensions=true this
+          plugin takes over the `deploy` phase, so it does NOT double-publish to Nexus.
+          Credentials come from the `ossrh` server in settings.xml (OSS_USER/OSS_PASS).
+        -->
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
@@ -161,6 +175,8 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>ossrh</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>published</waitUntil>
                         </configuration>
                     </plugin>
                 </plugins>
