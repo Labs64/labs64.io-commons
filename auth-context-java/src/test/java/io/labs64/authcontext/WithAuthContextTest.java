@@ -2,32 +2,35 @@ package io.labs64.authcontext;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.labs64.authcontext.core.AuthContext;
+import io.labs64.authcontext.core.AuthContextHolder;
 import org.junit.jupiter.api.Test;
 
-import io.labs64.authcontext.test.WithUserContext;
+import io.labs64.authcontext.test.WithAuthContext;
 
-class WithUserContextTest {
+class WithAuthContextTest {
 
     @Test
-    @WithUserContext(user = "jdoe", tenant = "t_9", roles = { "admin-role" }, requestId = "req-9")
+    @WithAuthContext(user = "jdoe", tenant = "t_9", scopes = { "account:read" }, requestId = "req-9")
     void bindsAnnotatedContext() {
-        UserContext context = UserContextHolder.require();
+        AuthContext context = AuthContextHolder.require();
         assertThat(context.userId()).isEqualTo("jdoe");
         assertThat(context.tenantId()).isEqualTo("t_9");
-        assertThat(context.hasRole("admin-role")).isTrue();
+        assertThat(context.hasScope("account:read")).isTrue();
         assertThat(context.requestId()).isEqualTo("req-9");
     }
 
     @Test
-    @WithUserContext(user = "svc:batch", tenant = "-")
+    @WithAuthContext(user = "svc:batch", tenant = "-")
     void dashTenantBindsTenantless() {
-        UserContext context = UserContextHolder.require();
+        AuthContext context = AuthContextHolder.require();
         assertThat(context.tenantId()).isNull();
         assertThat(context.isServicePrincipal()).isTrue();
     }
 
     @Test
     void noAnnotationMeansNoContext() {
-        assertThat(UserContextHolder.get()).isEmpty();
+        assertThat(AuthContextHolder.get()).isEmpty();
     }
 }
+

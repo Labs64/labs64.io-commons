@@ -9,6 +9,11 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
+import io.labs64.authcontext.core.AuthContext;
+import io.labs64.authcontext.core.AuthContextHolder;
+import io.labs64.authcontext.core.AuthContextParser;
+import io.labs64.authcontext.web.AuthContextFilter;
+import io.labs64.authcontext.web.AuthContextProperties;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
 import org.springframework.mock.web.MockFilterChain;
@@ -48,18 +53,18 @@ class AuthContextFilterVectorsTest {
                 .forEach(entry -> request.addHeader(entry.getKey(), entry.getValue().asText()));
 
         MockHttpServletResponse response = new MockHttpServletResponse();
-        AtomicReference<UserContext> captured = new AtomicReference<>();
+        AtomicReference<AuthContext> captured = new AtomicReference<>();
         AtomicReference<Boolean> chainCalled = new AtomicReference<>(false);
         MockFilterChain chain = new MockFilterChain(new jakarta.servlet.http.HttpServlet() {
             @Override
             protected void service(jakarta.servlet.http.HttpServletRequest req,
                     jakarta.servlet.http.HttpServletResponse res) {
                 chainCalled.set(true);
-                UserContextHolder.get().ifPresent(captured::set);
+                AuthContextHolder.get().ifPresent(captured::set);
             }
         });
 
-        new AuthContextFilter(new AuthContextProperties()).doFilter(request, response, chain);
+        new AuthContextFilter(new AuthContextProperties(), new AuthContextParser()).doFilter(request, response, chain);
 
         JsonNode expect = vector.get("expect");
         String outcome = expect.get("outcome").asText();
@@ -76,7 +81,7 @@ class AuthContextFilterVectorsTest {
         case "accept" -> {
             assertThat(response.getStatus()).isNotEqualTo(401);
             assertThat(chainCalled.get()).isTrue();
-            UserContext context = captured.get();
+            AuthContext context = captured.get();
             assertThat(context).as("context must be bound").isNotNull();
             assertThat(context.userId()).isEqualTo(expect.get("user").asText());
             if (expect.get("tenant").isNull()) {
@@ -84,9 +89,9 @@ class AuthContextFilterVectorsTest {
             } else {
                 assertThat(context.tenantId()).isEqualTo(expect.get("tenant").asText());
             }
-            var expectedRoles = new HashSet<String>();
-            expect.get("roles").forEach(role -> expectedRoles.add(role.asText()));
-            assertThat(context.roles()).isEqualTo(expectedRoles);
+            var expectedScopes = new HashSet<String>();
+            expect.get("scopes").forEach(scope -> expectedScopes.add(scope.asText()));
+            assertThat(context.scopes()).isEqualTo(expectedScopes);
             String expectedRequestId = expect.get("requestId").asText();
             if ("GENERATED".equals(expectedRequestId)) {
                 assertThat(context.requestId()).isNotBlank()
@@ -101,6 +106,7 @@ class AuthContextFilterVectorsTest {
         default -> throw new IllegalStateException("Unknown outcome: " + outcome);
         }
         // The holder must never leak past the request
-        assertThat(UserContextHolder.get()).isEmpty();
+        assertThat(AuthContextHolder.get()).isEmpty();
     }
 }
+

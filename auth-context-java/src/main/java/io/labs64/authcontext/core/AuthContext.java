@@ -1,4 +1,4 @@
-package io.labs64.authcontext;
+package io.labs64.authcontext.core;
 
 import java.util.Set;
 
@@ -7,28 +7,28 @@ import java.util.Set;
  *
  * @param userId    authenticated user (or {@code svc:<name>} service principal); never null
  * @param tenantId  tenant identifier, or {@code null} for tenant-less calls
- * @param roles     effective roles; never null, possibly empty
+ * @param scopes    effective scopes; never null, possibly empty
  * @param requestId request correlation id; never null
  */
-public record UserContext(String userId, String tenantId, Set<String> roles, String requestId) {
+public record AuthContext(String userId, String tenantId, Set<String> scopes, String requestId) {
 
-    public UserContext {
+    public AuthContext {
         if (userId == null || userId.isEmpty()) {
             throw new IllegalArgumentException("userId must not be empty");
         }
         if (requestId == null || requestId.isEmpty()) {
             throw new IllegalArgumentException("requestId must not be empty");
         }
-        roles = roles == null ? Set.of() : Set.copyOf(roles);
+        scopes = scopes == null ? Set.of() : Set.copyOf(scopes);
     }
 
-    public boolean hasRole(String role) {
-        return roles.contains(role);
+    public boolean hasScope(String scope) {
+        return scopes.contains(scope);
     }
 
-    public boolean hasAnyRole(String... candidates) {
-        for (String role : candidates) {
-            if (roles.contains(role)) {
+    public boolean hasAnyScope(String... candidates) {
+        for (String scope : candidates) {
+            if (scopes.contains(scope)) {
                 return true;
             }
         }
@@ -39,3 +39,4 @@ public record UserContext(String userId, String tenantId, Set<String> roles, Str
         return userId.startsWith(AuthHeaders.SERVICE_PRINCIPAL_PREFIX);
     }
 }
+

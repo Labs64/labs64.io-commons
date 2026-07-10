@@ -2,7 +2,7 @@
   "description": "Canonical behavior vectors for the auth-context libraries (Java + Python). Both implementations MUST pass every case. Contract: trusted header contract in labs64.io-gateway.",
   "headers": {
     "user": "X-Auth-User",
-    "roles": "X-Auth-Roles",
+    "scopes": "X-Auth-Scopes",
     "tenant": "X-Auth-Tenant",
     "requestId": "X-Request-ID"
   },
@@ -14,7 +14,7 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role,ecommerce-role",
+        "X-Auth-Scopes": "account:read,ecommerce:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000001"
       },
@@ -22,7 +22,7 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": ["admin-role", "ecommerce-role"],
+        "scopes": ["account:read", "ecommerce:read"],
         "requestId": "0198a7b0-1111-7abc-8def-000000000001"
       }
     },
@@ -31,7 +31,7 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "ecommerce-role",
+        "X-Auth-Scopes": "ecommerce:read",
         "X-Auth-Tenant": "-",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000002"
       },
@@ -39,16 +39,16 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": null,
-        "roles": ["ecommerce-role"],
+        "scopes": ["ecommerce:read"],
         "requestId": "0198a7b0-1111-7abc-8def-000000000002"
       }
     },
     {
-      "name": "empty-roles-header-means-no-roles",
+      "name": "empty-scopes-header-means-no-scopes",
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "",
+        "X-Auth-Scopes": "",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000003"
       },
@@ -56,12 +56,12 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": [],
+        "scopes": [],
         "requestId": "0198a7b0-1111-7abc-8def-000000000003"
       }
     },
     {
-      "name": "missing-roles-header-means-no-roles",
+      "name": "missing-scopes-header-means-no-scopes",
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
@@ -72,7 +72,7 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": [],
+        "scopes": [],
         "requestId": "0198a7b0-1111-7abc-8def-000000000004"
       }
     },
@@ -80,7 +80,7 @@
       "name": "missing-user-on-protected-path-rejected",
       "public": false,
       "headers": {
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000005"
       },
@@ -91,7 +91,7 @@
       "public": false,
       "headers": {
         "X-Auth-User": "",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000006"
       },
@@ -108,7 +108,7 @@
       "public": true,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000007"
       },
@@ -116,7 +116,7 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": ["admin-role"],
+        "scopes": ["account:read"],
         "requestId": "0198a7b0-1111-7abc-8def-000000000007"
       }
     },
@@ -125,7 +125,7 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe evil",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000008"
       },
@@ -136,29 +136,29 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t 100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000009"
       },
       "expect": { "outcome": "reject" }
     },
     {
-      "name": "invalid-role-item-rejected",
+      "name": "invalid-scope-item-rejected",
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role,bad role",
+        "X-Auth-Scopes": "account:read,bad scope",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-00000000000a"
       },
       "expect": { "outcome": "reject" }
     },
     {
-      "name": "roles-csv-items-are-trimmed",
+      "name": "scopes-csv-items-are-trimmed",
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role, ecommerce-role ,",
+        "X-Auth-Scopes": "account:read, ecommerce:read ,",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-00000000000b"
       },
@@ -166,7 +166,7 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": ["admin-role", "ecommerce-role"],
+        "scopes": ["account:read", "ecommerce:read"],
         "requestId": "0198a7b0-1111-7abc-8def-00000000000b"
       }
     },
@@ -175,7 +175,7 @@
       "public": false,
       "headers": {
         "X-Auth-User": "svc:checkout-be",
-        "X-Auth-Roles": "ecommerce-role",
+        "X-Auth-Scopes": "ecommerce:read",
         "X-Auth-Tenant": "-",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-00000000000c"
       },
@@ -183,7 +183,7 @@
         "outcome": "accept",
         "user": "svc:checkout-be",
         "tenant": null,
-        "roles": ["ecommerce-role"],
+        "scopes": ["ecommerce:read"],
         "requestId": "0198a7b0-1111-7abc-8def-00000000000c",
         "servicePrincipal": true
       }
@@ -193,14 +193,14 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100"
       },
       "expect": {
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": ["admin-role"],
+        "scopes": ["account:read"],
         "requestId": "GENERATED"
       }
     },
@@ -209,7 +209,7 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "abc def"
       },
@@ -217,7 +217,7 @@
         "outcome": "accept",
         "user": "jdoe",
         "tenant": "t_100",
-        "roles": ["admin-role"],
+        "scopes": ["account:read"],
         "requestId": "GENERATED"
       }
     },
@@ -226,14 +226,14 @@
       "public": false,
       "headers": {
         "X-Auth-User": "jdoe",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-00000000000d"
       },
       "expect": {
         "outcome": "accept",
         "user": "jdoe",
         "tenant": null,
-        "roles": ["admin-role"],
+        "scopes": ["account:read"],
         "requestId": "0198a7b0-1111-7abc-8def-00000000000d"
       }
     },
@@ -242,7 +242,7 @@
       "public": true,
       "headers": {
         "X-Auth-User": "jdoe evil",
-        "X-Auth-Roles": "admin-role",
+        "X-Auth-Scopes": "account:read",
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-00000000000e"
       },

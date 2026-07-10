@@ -6,24 +6,26 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import io.labs64.authcontext.core.AuthContext;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Binds a {@link io.labs64.authcontext.UserContext} for the duration of a
+ * Binds a {@link AuthContext} for the duration of a
  * test, replacing the JWT/header plumbing that production requests go
  * through.
  */
 @Target({ ElementType.METHOD, ElementType.TYPE })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@ExtendWith(WithUserContextExtension.class)
-public @interface WithUserContext {
+@ExtendWith(WithAuthContextExtension.class)
+public @interface WithAuthContext {
 
     String user() default "test-user";
 
     String tenant() default "t_test";
 
-    String[] roles() default {};
+    String[] scopes() default {};
 
     String requestId() default "test-request-id";
 }
+

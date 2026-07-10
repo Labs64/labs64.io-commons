@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from .context import (
     HEADER_REQUEST_ID,
-    HEADER_ROLES,
+    HEADER_SCOPES,
     HEADER_TENANT,
     HEADER_USER,
     TENANT_NONE,
@@ -22,6 +22,7 @@ def propagate_auth_context(request) -> None:
     if context is None:
         return
     request.headers[HEADER_USER] = context.user_id
-    request.headers[HEADER_ROLES] = ",".join(sorted(context.roles))
+    request.headers[HEADER_SCOPES] = ",".join(sorted(context.scopes))
     request.headers[HEADER_TENANT] = context.tenant_id if context.tenant_id is not None else TENANT_NONE
     request.headers[HEADER_REQUEST_ID] = context.request_id
+

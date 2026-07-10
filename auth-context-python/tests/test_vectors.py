@@ -34,7 +34,7 @@ def build_client() -> TestClient:
             "bound": True,
             "user": context.user_id,
             "tenant": context.tenant_id,
-            "roles": sorted(context.roles),
+            "scopes": sorted(context.scopes),
             "requestId": context.request_id,
             "servicePrincipal": context.is_service_principal,
         }
@@ -67,7 +67,7 @@ def test_vector(case):
     assert body["bound"] is True
     assert body["user"] == expect["user"]
     assert body["tenant"] == expect["tenant"]
-    assert body["roles"] == sorted(expect["roles"])
+    assert body["scopes"] == sorted(expect["scopes"])
     if expect["requestId"] == "GENERATED":
         assert body["requestId"]
         assert body["requestId"] != case["headers"].get("X-Request-ID")
@@ -78,3 +78,4 @@ def test_vector(case):
 
     # The context must never leak past the request
     assert current_context() is None
+

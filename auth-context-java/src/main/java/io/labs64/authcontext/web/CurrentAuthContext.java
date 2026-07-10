@@ -1,5 +1,7 @@
 package io.labs64.authcontext.web;
 
+import io.labs64.authcontext.core.AuthContext;
+
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -7,11 +9,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Injects the current {@link io.labs64.authcontext.UserContext} into a
+ * Injects the current {@link AuthContext} into a
  * controller method parameter.
  */
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-public @interface CurrentUserContext {
+public @interface CurrentAuthContext {
 }
+
