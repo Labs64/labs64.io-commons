@@ -13,6 +13,7 @@ OpenAPI spec (with x-labs64-auth)
     → auth-policy.json (gateway route policy)
   → openapi-generator (generates Java interfaces with annotations)
   → auth-context-spring-boot-starter (runtime enforcement)
+  → GET /.well-known/auth-policy (runtime, served by the starter for the gateway ACS)
 ```
 
 1. **Author**: Add `x-labs64-auth` to each endpoint in your OpenAPI spec
@@ -304,6 +305,24 @@ labs64:
 3. **`RequireScopesInterceptor`**: Checks `@RequireScopes` on generated interfaces. Returns 401 if no context, 403 if required scopes are missing.
 
 4. **`@PublicEndpoint`**: Bypasses both interceptors. The path must also be in `labs64.auth-context.public-paths` to pass the filter.
+
+## The `/.well-known/auth-policy` endpoint
+
+When `auth-policy.json` is on the classpath (Step 2c's `add-resource`), the
+starter auto-registers a controller serving it verbatim at
+`GET /.well-known/auth-policy`. The gateway's traefik-authproxy discovers
+modules via the `labs64.io/auth-policy=true` Service label and fetches this
+endpoint in-cluster to build its edge authorization table.
+
+- The path is **unconditionally public** in `AuthContextFilter` — it cannot be
+  disabled via `public-paths`, because the ACS must reach it before it can
+  authorize anything.
+- It is **not** exposed through the external gateway: module IngressRoutes
+  only publish API prefixes. The policy content is derived from the OpenAPI
+  spec (whose `/v3/api-docs` is public), so no secrets are involved.
+- Scope matching at the edge and in `RequireScopesInterceptor` is **OR**
+  (any listed scope suffices). The edge tenant check is presence-only —
+  tenant validation stays a module concern via `AuthContext.tenantId()`.
 
 ### Accessing the auth context in controllers
 
