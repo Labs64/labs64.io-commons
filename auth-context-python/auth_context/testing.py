@@ -1,23 +1,23 @@
-"""Test support: bind a UserContext without going through headers."""
+"""Test support: bind an AuthContext without going through headers."""
 
 from __future__ import annotations
 
 from contextlib import contextmanager
 
-from .context import UserContext, _current
+from .context import AuthContext, _current
 
 
 @contextmanager
-def set_user_context(
+def set_auth_context(
     user: str = "test-user",
     tenant: str | None = "t_test",
-    roles: tuple[str, ...] = (),
+    scopes: tuple[str, ...] = (),
     request_id: str = "test-request-id",
 ):
-    context = UserContext(
+    context = AuthContext(
         user_id=user,
         tenant_id=tenant,
-        roles=frozenset(roles),
+        scopes=frozenset(scopes),
         request_id=request_id,
     )
     token = _current.set(context)
@@ -31,9 +31,10 @@ try:  # pytest fixture, available when pytest is installed
     import pytest
 
     @pytest.fixture
-    def user_context():
-        with set_user_context() as context:
+    def auth_context():
+        with set_auth_context() as context:
             yield context
 
 except ImportError:  # pragma: no cover
     pass
+

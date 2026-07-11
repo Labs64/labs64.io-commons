@@ -5,21 +5,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.lang.reflect.Method;
 import java.util.Set;
 
+import io.labs64.authcontext.core.AuthContext;
+import io.labs64.authcontext.core.AuthContextHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
 
-import io.labs64.authcontext.web.RequireRole;
-import io.labs64.authcontext.web.RequireRoleInterceptor;
+import io.labs64.authcontext.authorization.RequireScopes;
+import io.labs64.authcontext.authorization.RequireScopesInterceptor;
 
-class RequireRoleInterceptorTest {
+class RequireScopesInterceptorTest {
 
-    private final RequireRoleInterceptor interceptor = new RequireRoleInterceptor();
+    private final RequireScopesInterceptor interceptor = new RequireScopesInterceptor();
 
     static class TestController {
-        @RequireRole({ "admin-role", "ecommerce-role" })
+        @RequireScopes({ "account:read", "ecommerce:read" })
         public void protectedOperation() {
         }
 
@@ -27,7 +29,7 @@ class RequireRoleInterceptorTest {
         }
     }
 
-    @RequireRole("admin-role")
+    @RequireScopes("account:read")
     static class ClassLevelController {
         public void operation() {
         }
@@ -35,7 +37,7 @@ class RequireRoleInterceptorTest {
 
     @AfterEach
     void cleanup() {
-        UserContextHolder.clear();
+        AuthContextHolder.clear();
     }
 
     private boolean invoke(Class<?> controller, String methodName) throws Exception {
@@ -45,14 +47,14 @@ class RequireRoleInterceptorTest {
     }
 
     @Test
-    void allowsCallerWithMatchingRole() throws Exception {
-        UserContextHolder.set(new UserContext("jdoe", "t_1", Set.of("ecommerce-role"), "r-1"));
+    void allowsCallerWithMatchingScope() throws Exception {
+        AuthContextHolder.set(new AuthContext("jdoe", "t_1", Set.of("ecommerce:read"), "r-1"));
         assertThat(invoke(TestController.class, "protectedOperation")).isTrue();
     }
 
     @Test
-    void forbidsCallerWithoutMatchingRole() throws Exception {
-        UserContextHolder.set(new UserContext("jdoe", "t_1", Set.of("other-role"), "r-1"));
+    void forbidsCallerWithoutMatchingScope() throws Exception {
+        AuthContextHolder.set(new AuthContext("jdoe", "t_1", Set.of("other-scope"), "r-1"));
         assertThat(invoke(TestController.class, "protectedOperation")).isFalse();
     }
 
@@ -68,9 +70,28 @@ class RequireRoleInterceptorTest {
 
     @Test
     void honorsClassLevelAnnotation() throws Exception {
-        UserContextHolder.set(new UserContext("jdoe", "t_1", Set.of("other-role"), "r-1"));
+        AuthContextHolder.set(new AuthContext("jdoe", "t_1", Set.of("other-scope"), "r-1"));
         assertThat(invoke(ClassLevelController.class, "operation")).isFalse();
-        UserContextHolder.set(new UserContext("jdoe", "t_1", Set.of("admin-role"), "r-1"));
+        AuthContextHolder.set(new AuthContext("jdoe", "t_1", Set.of("account:read"), "r-1"));
         assertThat(invoke(ClassLevelController.class, "operation")).isTrue();
     }
+
+    @Test
+    void honorsInterfaceMethodAnnotation() throws Exception {
+        AuthContextHolder.set(new AuthContext("jdoe", "t_1", Set.of("payment:write"), "r-1"));
+
+        assertThat(invoke(GeneratedApiController.class, "pay")).isTrue();
+    }
+
+    interface GeneratedApi {
+        @RequireScopes("payment:write")
+        void pay();
+    }
+
+    static class GeneratedApiController implements GeneratedApi {
+        @Override
+        public void pay() {
+        }
+    }
 }
+

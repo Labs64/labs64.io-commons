@@ -6,21 +6,22 @@ import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
-import io.labs64.authcontext.UserContext;
-import io.labs64.authcontext.UserContextHolder;
+import io.labs64.authcontext.core.AuthContext;
+import io.labs64.authcontext.core.AuthContextHolder;
 
-/** Resolves {@link UserContext} controller parameters from the bound request context. */
-public class UserContextArgumentResolver implements HandlerMethodArgumentResolver {
+/** Resolves {@link AuthContext} controller parameters from the bound request context. */
+public class AuthContextArgumentResolver implements HandlerMethodArgumentResolver {
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        return UserContext.class.isAssignableFrom(parameter.getParameterType())
-                || parameter.hasParameterAnnotation(CurrentUserContext.class);
+        return AuthContext.class.isAssignableFrom(parameter.getParameterType())
+                || parameter.hasParameterAnnotation(CurrentAuthContext.class);
     }
 
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
             NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        return UserContextHolder.require();
+        return AuthContextHolder.require();
     }
 }
+

@@ -53,3 +53,4 @@ class AuthContextMiddleware:
             }
         )
         await send({"type": "http.response.body", "body": _UNAUTHORIZED_BODY})
+

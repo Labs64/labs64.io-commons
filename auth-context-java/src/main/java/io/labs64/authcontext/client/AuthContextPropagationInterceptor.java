@@ -2,12 +2,13 @@ package io.labs64.authcontext.client;
 
 import java.io.IOException;
 
+import io.labs64.authcontext.core.AuthContextHolder;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.ClientHttpResponse;
 
-import io.labs64.authcontext.AuthHeaders;
+import io.labs64.authcontext.core.AuthHeaders;
 
 /**
  * Propagates the bound auth context on in-cluster, on-behalf-of calls
@@ -19,9 +20,9 @@ public class AuthContextPropagationInterceptor implements ClientHttpRequestInter
     @Override
     public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution)
             throws IOException {
-        io.labs64.authcontext.UserContextHolder.get().ifPresent(context -> {
+        AuthContextHolder.get().ifPresent(context -> {
             request.getHeaders().set(AuthHeaders.USER, context.userId());
-            request.getHeaders().set(AuthHeaders.ROLES, String.join(",", context.roles()));
+            request.getHeaders().set(AuthHeaders.SCOPES, String.join(",", context.scopes()));
             request.getHeaders().set(AuthHeaders.TENANT,
                     context.tenantId() == null ? AuthHeaders.TENANT_NONE : context.tenantId());
             request.getHeaders().set(AuthHeaders.REQUEST_ID, context.requestId());
@@ -29,3 +30,4 @@ public class AuthContextPropagationInterceptor implements ClientHttpRequestInter
         return execution.execute(request, body);
     }
 }
+

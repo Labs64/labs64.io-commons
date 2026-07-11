@@ -1,4 +1,4 @@
-package io.labs64.authcontext;
+package io.labs64.authcontext.web;
 
 import java.util.List;
 
@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Configuration for the auth-context filter.
  *
  * <p>{@code public-paths} are request-path prefixes served without a mandatory
- * user context (matching the gateway's public routes: API docs, health). All
+ * auth context (matching the gateway's public routes: API docs, health). All
  * other paths fail closed with 401 when the gateway headers are missing, so an
  * accidentally exposed service rejects unauthenticated traffic.
  */
@@ -35,3 +35,4 @@ public class AuthContextProperties {
         this.publicPaths = publicPaths;
     }
 }
+

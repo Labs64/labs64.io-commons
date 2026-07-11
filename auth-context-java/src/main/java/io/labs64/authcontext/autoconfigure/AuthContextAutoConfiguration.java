@@ -1,7 +1,5 @@
 package io.labs64.authcontext.autoconfigure;
 
-import java.util.List;
-
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,15 +8,16 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
-import org.springframework.web.method.support.HandlerMethodArgumentResolver;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import io.labs64.authcontext.AuthContextFilter;
-import io.labs64.authcontext.AuthContextProperties;
+import io.labs64.authcontext.authorization.RequireScopesInterceptor;
+import io.labs64.authcontext.authorization.RequireTenantInterceptor;
 import io.labs64.authcontext.client.AuthContextPropagationInterceptor;
-import io.labs64.authcontext.web.RequireRoleInterceptor;
-import io.labs64.authcontext.web.UserContextArgumentResolver;
+import io.labs64.authcontext.core.AuthContextParser;
+import io.labs64.authcontext.web.AuthContextArgumentResolver;
+import io.labs64.authcontext.web.AuthContextFilter;
+import io.labs64.authcontext.web.AuthContextProperties;
+import io.labs64.authcontext.web.AuthContextWebMvcConfigurer;
 
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
@@ -28,9 +27,16 @@ public class AuthContextAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    public FilterRegistrationBean<AuthContextFilter> authContextFilter(AuthContextProperties properties) {
+    public AuthContextParser authContextParser() {
+        return new AuthContextParser();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public FilterRegistrationBean<AuthContextFilter> authContextFilter(AuthContextProperties properties,
+            AuthContextParser parser) {
         FilterRegistrationBean<AuthContextFilter> registration = new FilterRegistrationBean<>(
-                new AuthContextFilter(properties));
+                new AuthContextFilter(properties, parser));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
         return registration;
     }
@@ -42,17 +48,30 @@ public class AuthContextAutoConfiguration {
     }
 
     @Bean
-    public WebMvcConfigurer authContextWebMvcConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
-                resolvers.add(new UserContextArgumentResolver());
-            }
+    @ConditionalOnMissingBean
+    public AuthContextArgumentResolver authContextArgumentResolver() {
+        return new AuthContextArgumentResolver();
+    }
 
-            @Override
-            public void addInterceptors(InterceptorRegistry registry) {
-                registry.addInterceptor(new RequireRoleInterceptor());
-            }
-        };
+    @Bean
+    @ConditionalOnMissingBean
+    public RequireTenantInterceptor requireTenantInterceptor() {
+        return new RequireTenantInterceptor();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RequireScopesInterceptor requireScopesInterceptor() {
+        return new RequireScopesInterceptor();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public WebMvcConfigurer authContextWebMvcConfigurer(AuthContextArgumentResolver authContextArgumentResolver,
+            RequireTenantInterceptor requireTenantInterceptor,
+            RequireScopesInterceptor requireScopesInterceptor) {
+        return new AuthContextWebMvcConfigurer(authContextArgumentResolver, requireTenantInterceptor,
+                requireScopesInterceptor);
     }
 }
+
