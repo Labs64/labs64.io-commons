@@ -6,13 +6,19 @@
 //
 // Principals/attributes derive 1:1 from the AuthContext (X-Auth-User /
 // X-Auth-Scopes / X-Auth-Tenant / X-Request-ID) — see §5.4.
+//
+// v2 (RFC-05 P2/P3): actions mirror the REAL module operationIds; the edge tier
+// gets a generic ApiOperation resource + "invoke" action (per-operation edge
+// policies are GENERATED from x-labs64-auth and reference
+// ApiOperation::"<module>::<operationId>"); Ctx.tenant is optional because
+// tenant-less requests omit it (see test-vectors/cedar-request-vectors.json).
 namespace Labs64IO {
 
   // ── Principals ──
   entity Group;
   entity Tenant = {
-    plan: String,
-    region: String,
+    plan?: String,
+    region?: String,
   };
   entity User in [Tenant, Group] = {
     scopes: Set<String>,
@@ -23,24 +29,30 @@ namespace Labs64IO {
     scopes: Set<String>,
   };
 
+  // ── Edge tier (Tier 1) — one resource per OpenAPI operation ──
+  // Entity id convention: "<module>::<operationId>" (reserved: "static::<prefix>").
+  // Edge policies are generated from x-labs64-auth by the commons
+  // OpenApiAuthPreprocessor and decide coarse reachability only.
+  entity ApiOperation;
+
   // ── Domain resources — one entity per module cluster ──
   entity Payment in [Tenant] = {
     tenant: Tenant,
-    owner: User,
-    amount: Long,
     status: String,
-    psp: String,
+    owner?: User,
+    amount?: Long,
+    psp?: String,
   };
-  entity CheckoutOrder in [Tenant] = {
+  entity PurchaseOrder in [Tenant] = {
     tenant: Tenant,
-    owner: User,
-    status: String,
+    owner?: User,
+    status?: String,
   };
   entity AuditEvent in [Tenant] = {
-    tenant: Tenant,
-    severity: String,
-    actor: User,
-    pii: Bool,
+    tenant?: Tenant,
+    severity?: String,
+    actor?: User,
+    pii?: Bool,
   };
   entity PortalAccount in [Tenant] = {
     tenant: Tenant,
@@ -51,7 +63,7 @@ namespace Labs64IO {
   // ── Shared request context (superset; per-action policies use what they need) ──
   // Optional attributes keep one context type usable across edge + domain tiers.
   type Ctx = {
-    "tenant": Tenant,
+    "tenant"?: Tenant,
     "scopes": Set<String>,
     "requestId": String,
     "path"?: String,
@@ -60,12 +72,21 @@ namespace Labs64IO {
     "redacted"?: Bool,
   };
 
-  // ── Actions mirror OpenAPI operationIds / x-labs64-auth ──
-  action "refundPayment"  appliesTo { principal: [User], resource: [Payment], context: Ctx };
-  action "capturePayment" appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
-  action "readPayment"    appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
-  action "placeOrder"     appliesTo { principal: [User], resource: [CheckoutOrder], context: Ctx };
-  action "publishAudit"   appliesTo { principal: [Service], resource: [AuditEvent], context: Ctx };
-  action "readAudit"      appliesTo { principal: [User], resource: [AuditEvent], context: Ctx };
-  action "manageAccount"  appliesTo { principal: [User], resource: [PortalAccount], context: Ctx };
+  // ── Edge action: coarse "may this identity reach this operation at all?" ──
+  action "invoke" appliesTo { principal: [User, Service], resource: [ApiOperation], context: Ctx };
+
+  // ── Domain actions mirror the modules' REAL OpenAPI operationIds ──
+  // payment-gateway
+  action "readPayment"           appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
+  action "payPayment"            appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
+  action "closePayment"          appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
+  // checkout
+  action "readPurchaseOrder"     appliesTo { principal: [User, Service], resource: [PurchaseOrder], context: Ctx };
+  action "updatePurchaseOrder"   appliesTo { principal: [User, Service], resource: [PurchaseOrder], context: Ctx };
+  action "checkoutPurchaseOrder" appliesTo { principal: [User, Service], resource: [PurchaseOrder], context: Ctx };
+  // auditflow
+  action "publishAudit"          appliesTo { principal: [User, Service], resource: [AuditEvent], context: Ctx };
+  action "readAudit"             appliesTo { principal: [User], resource: [AuditEvent], context: Ctx };
+  // customer-portal (future — BE is a stub today; FeBAC foundation)
+  action "manageAccount"         appliesTo { principal: [User], resource: [PortalAccount], context: Ctx };
 }
