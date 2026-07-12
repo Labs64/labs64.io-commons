@@ -80,5 +80,5 @@ mvn -q exec:java \
 
 ## Related
 
-- Centralized authentication & authorization gateway (`labs64.io-gateway/traefik-authproxy`)
-- [`labs64.io-gateway`](https://github.com/Labs64/labs64.io-gateway) — traefik-authproxy, the header contract's producer
+- Centralized authentication & authorization gateway (`labs64.io-authproxy/traefik-authproxy`)
+- [`labs64.io-authproxy`](https://github.com/Labs64/labs64.io-authproxy) — traefik-authproxy, the header contract's producer
