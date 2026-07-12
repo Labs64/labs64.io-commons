@@ -45,10 +45,82 @@ public class OpenApiAuthPreprocessor {
     }
 
     public void process(final Path input, final Path openApiOutput, final Path policyOutput) throws IOException {
+        process(input, openApiOutput, policyOutput, null, null);
+    }
+
+    /**
+     * Full pipeline including the generated Tier-1 edge Cedar policy set
+     * (RFC-05 P2). {@code cedarOutput}/{@code module} may be null to skip.
+     */
+    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+            final String module) throws IOException {
         Map<String, Object> openApi = readYaml(input);
         Map<String, Object> policy = enrich(openApi);
         writeYaml(openApiOutput, openApi);
         writeJson(policyOutput, policy);
+        if (cedarOutput != null) {
+            if (module == null || module.isBlank()) {
+                throw new IllegalArgumentException("module is required when a cedar output is requested");
+            }
+            writeText(cedarOutput, cedarPolicies(module, policy));
+        }
+    }
+
+    /**
+     * Renders the enriched policy document as per-operation edge Cedar policies
+     * against the shared schema's {@code ApiOperation}/{@code invoke} model.
+     * The three x-labs64-auth patterns translate 1:1 (RFC-05 §5.2): public →
+     * unconditional permit; tenant → {@code context has tenant}; scopes →
+     * any-overlap ({@code ||}) on {@code context.scopes}, matching the
+     * authproxy's OR-scope semantics.
+     */
+    @SuppressWarnings("unchecked")
+    public String cedarPolicies(final String module, final Map<String, Object> policy) {
+        StringBuilder cedar = new StringBuilder();
+        cedar.append("// GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
+        cedar.append("// Tier 1 edge policies for module \"").append(module).append("\" (RFC-05 P2).\n");
+        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
+            String operationId = route.get("operationId") instanceof String id && !id.isBlank() ? id
+                    : route.get("method") + ":" + route.get("path");
+            String entityId = cedarString(module + "::" + operationId);
+            cedar.append('\n');
+            cedar.append("@id(").append(entityId).append(")\n");
+            cedar.append("permit(\n");
+            cedar.append("  principal,\n");
+            cedar.append("  action == Labs64IO::Action::\"invoke\",\n");
+            cedar.append("  resource == Labs64IO::ApiOperation::").append(entityId).append('\n');
+            cedar.append(')');
+            String condition = cedarCondition(route);
+            if (!condition.isEmpty()) {
+                cedar.append(" when { ").append(condition).append(" }");
+            }
+            cedar.append(";\n");
+        }
+        return cedar.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private String cedarCondition(final Map<String, Object> route) {
+        if (Boolean.TRUE.equals(route.get("public"))) {
+            return "";
+        }
+        List<String> conditions = new ArrayList<>();
+        if (Boolean.TRUE.equals(route.get("tenantRequired"))) {
+            conditions.add("(context has tenant)");
+        }
+        List<String> scopes = (List<String>) route.get("scopes");
+        if (scopes != null && !scopes.isEmpty()) {
+            List<String> checks = new ArrayList<>();
+            for (String scope : scopes) {
+                checks.add("context.scopes.contains(" + cedarString(scope) + ")");
+            }
+            conditions.add("(" + String.join(" || ", checks) + ")");
+        }
+        return String.join(" && ", conditions);
+    }
+
+    private String cedarString(final String value) {
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     public Map<String, Object> enrich(final Map<String, Object> openApi) {
@@ -150,6 +222,14 @@ public class OpenApiAuthPreprocessor {
             Files.createDirectories(parent);
         }
         yamlMapper.writeValue(output.toFile(), value);
+    }
+
+    private void writeText(final Path output, final String value) throws IOException {
+        Path parent = output.toAbsolutePath().getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        Files.writeString(output, value);
     }
 
     private void writeJson(final Path output, final Object value) throws IOException {

@@ -59,6 +59,61 @@ class OpenApiAuthPreprocessorTest {
     }
 
     @Test
+    void emitsEdgeCedarPoliciesPerOperation() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments", map(
+                        "get", map(
+                                "operationId", "listPayments",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:read", "payment:admin")))),
+                "/health", map(
+                        "get", map(
+                                "operationId", "health",
+                                "x-labs64-auth", map("public", true)))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        String cedar = preprocessor.cedarPolicies("payment-gateway", preprocessor.enrich(openApi));
+
+        assertThat(cedar).contains("""
+                @id("payment-gateway::listPayments")
+                permit(
+                  principal,
+                  action == Labs64IO::Action::"invoke",
+                  resource == Labs64IO::ApiOperation::"payment-gateway::listPayments"
+                ) when { (context has tenant) && (context.scopes.contains("payment:read") || context.scopes.contains("payment:admin")) };
+                """);
+        assertThat(cedar).contains("""
+                @id("payment-gateway::health")
+                permit(
+                  principal,
+                  action == Labs64IO::Action::"invoke",
+                  resource == Labs64IO::ApiOperation::"payment-gateway::health"
+                );
+                """);
+    }
+
+    @Test
+    void writesCedarOutputWhenRequested() throws IOException {
+        Path input = tempDir.resolve("openapi.yaml");
+        Files.writeString(input, """
+                openapi: 3.0.3
+                paths:
+                  /health:
+                    get:
+                      operationId: health
+                      x-labs64-auth:
+                        public: true
+                """);
+        Path cedarOutput = tempDir.resolve("module.cedar");
+
+        new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"), tempDir.resolve("policy.json"),
+                cedarOutput, "auditflow");
+
+        assertThat(Files.readString(cedarOutput)).contains("Labs64IO::ApiOperation::\"auditflow::health\"");
+    }
+
+    @Test
     void writesPolicyAsJson() throws IOException {
         Path input = tempDir.resolve("openapi.yaml");
         Path openApiOutput = tempDir.resolve("generated-openapi.yaml");
