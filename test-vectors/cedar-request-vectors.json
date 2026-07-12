@@ -1,0 +1,81 @@
+{
+  "description": "Canonical AuthContext -> Cedar request serialization (RFC-05 P1, §5.4). The platform SDK's @Authorize PEP (Java + Python, P2/P3) MUST build the Cedar principal/context from an AuthContext exactly as specified here, so both languages produce identical Cedar requests for the same trusted headers. Schema: auth-policy-cedar/schema.cedarschema. This is the cross-language contract for the Cedar layer, mirroring auth-context-vectors.json for the header layer.",
+  "schema": "auth-policy-cedar/schema.cedarschema",
+  "mapping": {
+    "principal": "svc:<name> -> Labs64IO::Service::\"svc:<name>\", else Labs64IO::User::\"<user>\"",
+    "context.tenant": "Labs64IO::Tenant::\"<tenant>\" (X-Auth-Tenant; omitted when tenant is '-'/null)",
+    "context.scopes": "X-Auth-Scopes split on ',' (empty header -> [])",
+    "context.requestId": "X-Request-ID",
+    "action": "from @Authorize(action=...) / operationId — supplied by the call site, not the header",
+    "resource": "supplied by the module (repository fetch / handler arg) — not derivable from headers"
+  },
+  "cases": [
+    {
+      "name": "user-with-tenant-and-scopes",
+      "authContext": {
+        "user": "alice",
+        "scopes": ["payment:refund", "payment:read"],
+        "tenant": "t_100",
+        "requestId": "0198a7b0-1111-7abc-8def-000000000001"
+      },
+      "cedarRequest": {
+        "principal": { "type": "Labs64IO::User", "id": "alice" },
+        "context": {
+          "tenant": { "type": "Labs64IO::Tenant", "id": "t_100" },
+          "scopes": ["payment:refund", "payment:read"],
+          "requestId": "0198a7b0-1111-7abc-8def-000000000001"
+        }
+      }
+    },
+    {
+      "name": "service-principal-maps-to-Service",
+      "authContext": {
+        "user": "svc:auditflow-publisher",
+        "scopes": ["audit-event:write"],
+        "tenant": "t_100",
+        "requestId": "0198a7b0-1111-7abc-8def-000000000002"
+      },
+      "cedarRequest": {
+        "principal": { "type": "Labs64IO::Service", "id": "svc:auditflow-publisher" },
+        "context": {
+          "tenant": { "type": "Labs64IO::Tenant", "id": "t_100" },
+          "scopes": ["audit-event:write"],
+          "requestId": "0198a7b0-1111-7abc-8def-000000000002"
+        }
+      }
+    },
+    {
+      "name": "tenantless-user-omits-context-tenant",
+      "authContext": {
+        "user": "jdoe",
+        "scopes": ["ecommerce:read"],
+        "tenant": null,
+        "requestId": "0198a7b0-1111-7abc-8def-000000000003"
+      },
+      "cedarRequest": {
+        "principal": { "type": "Labs64IO::User", "id": "jdoe" },
+        "context": {
+          "scopes": ["ecommerce:read"],
+          "requestId": "0198a7b0-1111-7abc-8def-000000000003"
+        }
+      }
+    },
+    {
+      "name": "empty-scopes-becomes-empty-set",
+      "authContext": {
+        "user": "jdoe",
+        "scopes": [],
+        "tenant": "t_200",
+        "requestId": "0198a7b0-1111-7abc-8def-000000000004"
+      },
+      "cedarRequest": {
+        "principal": { "type": "Labs64IO::User", "id": "jdoe" },
+        "context": {
+          "tenant": { "type": "Labs64IO::Tenant", "id": "t_200" },
+          "scopes": [],
+          "requestId": "0198a7b0-1111-7abc-8def-000000000004"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+// Labs64.IO unified Cedar schema (RFC-05 §5.1) — the SINGLE source of truth for
+// both authorization tiers. The edge tier (authproxy PEP) and the domain tier
+// (module SDK PEP) validate their policies against THIS one schema in one CI
+// step, which is what makes split-authorization drift (F3) a validation failure
+// rather than a review miss.
+//
+// Principals/attributes derive 1:1 from the AuthContext (X-Auth-User /
+// X-Auth-Scopes / X-Auth-Tenant / X-Request-ID) — see §5.4.
+namespace Labs64IO {
+
+  // ── Principals ──
+  entity Group;
+  entity Tenant = {
+    plan: String,
+    region: String,
+  };
+  entity User in [Tenant, Group] = {
+    scopes: Set<String>,
+    mfaVerified: Bool,
+  };
+  // svc:<name>, SPIFFE-backed (§9). Same authorization path as User (P8).
+  entity Service in [Tenant] = {
+    scopes: Set<String>,
+  };
+
+  // ── Domain resources — one entity per module cluster ──
+  entity Payment in [Tenant] = {
+    tenant: Tenant,
+    owner: User,
+    amount: Long,
+    status: String,
+    psp: String,
+  };
+  entity CheckoutOrder in [Tenant] = {
+    tenant: Tenant,
+    owner: User,
+    status: String,
+  };
+  entity AuditEvent in [Tenant] = {
+    tenant: Tenant,
+    severity: String,
+    actor: User,
+    pii: Bool,
+  };
+  entity PortalAccount in [Tenant] = {
+    tenant: Tenant,
+    owner: User,
+    tier: String,
+  };
+
+  // ── Shared request context (superset; per-action policies use what they need) ──
+  // Optional attributes keep one context type usable across edge + domain tiers.
+  type Ctx = {
+    "tenant": Tenant,
+    "scopes": Set<String>,
+    "requestId": String,
+    "path"?: String,
+    "mfaVerified"?: Bool,
+    "onBehalfOf"?: User,
+    "redacted"?: Bool,
+  };
+
+  // ── Actions mirror OpenAPI operationIds / x-labs64-auth ──
+  action "refundPayment"  appliesTo { principal: [User], resource: [Payment], context: Ctx };
+  action "capturePayment" appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
+  action "readPayment"    appliesTo { principal: [User, Service], resource: [Payment], context: Ctx };
+  action "placeOrder"     appliesTo { principal: [User], resource: [CheckoutOrder], context: Ctx };
+  action "publishAudit"   appliesTo { principal: [Service], resource: [AuditEvent], context: Ctx };
+  action "readAudit"      appliesTo { principal: [User], resource: [AuditEvent], context: Ctx };
+  action "manageAccount"  appliesTo { principal: [User], resource: [PortalAccount], context: Ctx };
+}

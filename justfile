@@ -23,3 +23,8 @@ python-venv:
 python:
     cd auth-context-python && test -d .venv || just python-venv
     cd auth-context-python && .venv/bin/pytest -q
+
+# RFC-05 P1: validate the unified Cedar schema/policies + cross-tenant isolation
+# gate (requires the `cedar` CLI: cargo install cedar-policy-cli)
+cedar:
+    ./auth-policy-cedar/validate.sh

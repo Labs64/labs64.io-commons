@@ -1,0 +1,2 @@
+{ "tenant": { "type": "Labs64IO::Tenant", "id": "t_200" },
+  "scopes": ["payment:refund"], "requestId": "req-2" }

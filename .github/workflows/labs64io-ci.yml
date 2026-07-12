@@ -39,3 +39,21 @@ jobs:
           cd auth-context-python
           pip install -q -e ".[dev]"
           pytest -q
+
+  # RFC-05 P1 — unified Cedar schema & policy gates. Edge + domain policies
+  # validate against ONE shared schema (no-drift, F3), and a cross-tenant
+  # isolation gate proves the tenant guard denies across-tenant access (F4/F8).
+  cedar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Cache cedar CLI
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: cedar-cli-4.11.2
+      - name: Install cedar CLI
+        run: command -v cedar || cargo install cedar-policy-cli --version 4.11.2 --locked
+      - name: Cedar schema + cross-tenant isolation gate
+        run: ./auth-policy-cedar/validate.sh
