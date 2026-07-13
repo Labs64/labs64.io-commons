@@ -133,7 +133,10 @@ class AuthorizeInterceptorTest {
     }
 
     @Test
-    void resolverFailureFailsClosedInEnforce() throws Exception {
+    void resolverExceptionsPropagateWithModuleSemantics() throws Exception {
+        // The module's own exceptions (NotFound etc.) must reach its handlers
+        // untouched — an erroring request is fail-closed by nature, and a 404
+        // must never be converted into an existence-leaking 403.
         CedarProperties properties = new CedarProperties();
         properties.setEnabled(true);
         properties.setMode(CedarProperties.Mode.ENFORCE);
@@ -147,7 +150,7 @@ class AuthorizeInterceptorTest {
 
             @Override
             public CedarEntity resolve(final String type, final Object ref, final AuthContext ctx) {
-                throw new IllegalStateException("db down");
+                throw new IllegalStateException("payment not found");
             }
         };
         AuthorizeInterceptor interceptor = new AuthorizeInterceptor(service, List.of(broken),
@@ -160,8 +163,10 @@ class AuthorizeInterceptorTest {
         request.setAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE, Map.of("paymentId", "pay_1"));
         response = new MockHttpServletResponse();
 
-        assertThat(interceptor.preHandle(request, response, handler)).isFalse();
-        assertThat(response.getStatus()).isEqualTo(403);
-        assertThat(decisions.get(0).error()).contains("resource resolution failed");
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> interceptor.preHandle(request, response, handler))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("payment not found");
+        assertThat(decisions).isEmpty();
     }
 }

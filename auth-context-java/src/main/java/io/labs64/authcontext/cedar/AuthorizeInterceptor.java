@@ -83,18 +83,11 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
 
     private AuthorizationDecision decide(final Authorize annotation, final HttpServletRequest request,
             final AuthContext context) {
-        CedarEntity resource;
-        try {
-            Object resourceRef = evaluateResourceRef(annotation.resource(), request);
-            resource = resolve(annotation.resourceType(), resourceRef, context);
-        } catch (CedarResourceNotFoundException e) {
-            throw e; // module's 404 semantics — do not convert to a 403 leak
-        } catch (RuntimeException e) {
-            // Resolution failure = no resource context = deny with error (fail closed).
-            return new AuthorizationDecision(annotation.action(), annotation.resourceType(), "-",
-                    false, service.isEnforcing(), List.of(), "resource resolution failed: " + e,
-                    context.userId(), context.tenantId(), context.requestId());
-        }
+        // Resolver/SpEL exceptions propagate untouched: the module's own error
+        // semantics apply (e.g. its NotFoundException → 404, never a 403 that
+        // leaks existence) and an erroring request is fail-closed by nature.
+        Object resourceRef = evaluateResourceRef(annotation.resource(), request);
+        CedarEntity resource = resolve(annotation.resourceType(), resourceRef, context);
         return service.decide(context, annotation.action(), resource);
     }
 
