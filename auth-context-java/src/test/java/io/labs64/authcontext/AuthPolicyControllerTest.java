@@ -30,17 +30,36 @@ class AuthPolicyControllerTest {
     }
 
     @Test
+    void servesClasspathCedarPolicyAsText() {
+        // src/test/resources/auth-policy.cedar must exist for this test
+        ResponseEntity<Resource> response = new AuthPolicyController().authPolicyCedar();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.TEXT_PLAIN, response.getHeaders().getContentType());
+        assertTrue(response.getBody().exists());
+    }
+
+    @Test
     void pathConstantIsWellKnown() {
         assertEquals("/.well-known/auth-policy", AuthPolicyController.AUTH_POLICY_PATH);
+        assertEquals("/.well-known/auth-policy.cedar", AuthPolicyController.AUTH_POLICY_CEDAR_PATH);
     }
 
     @Test
     void wellKnownAuthPolicyIsAlwaysPublic() throws Exception {
+        assertPathIsPublic(AuthPolicyController.AUTH_POLICY_PATH);
+    }
+
+    @Test
+    void wellKnownCedarPolicyIsAlwaysPublic() throws Exception {
+        assertPathIsPublic(AuthPolicyController.AUTH_POLICY_CEDAR_PATH);
+    }
+
+    private void assertPathIsPublic(String path) throws Exception {
         AuthContextProperties props = new AuthContextProperties();
         props.setPublicPaths(java.util.List.of()); // module overrode defaults
         AuthContextFilter filter = new AuthContextFilter(props, new AuthContextParser());
 
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", AuthPolicyController.AUTH_POLICY_PATH);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain chain = new MockFilterChain();
 

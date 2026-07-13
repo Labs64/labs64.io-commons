@@ -13,7 +13,7 @@ OpenAPI spec (with x-labs64-auth)
     → auth-policy.json (gateway route policy)
   → openapi-generator (generates Java interfaces with annotations)
   → auth-context-spring-boot-starter (runtime enforcement)
-  → GET /.well-known/auth-policy (runtime, served by the starter for the gateway ACS)
+  → GET /.well-known/auth-policy + /.well-known/auth-policy.cedar (runtime, served by the starter for the gateway ACS)
 ```
 
 1. **Author**: Add `x-labs64-auth` to each endpoint in your OpenAPI spec
@@ -103,6 +103,11 @@ Add three things to your `pom.xml`:
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
     <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.json</auth-policy.generated>
+    <!-- Tier-1 edge Cedar policies (RFC-05 P2). auth-policy.module MUST equal
+         the module's gateway path prefix (e.g. payment-gateway) — it is baked
+         into the Cedar resource ids. -->
+    <auth-policy-cedar.generated>${project.build.directory}/generated-resources/auth-policy.cedar</auth-policy-cedar.generated>
+    <auth-policy.module>your-module</auth-policy.module>
 </properties>
 ```
 
@@ -152,6 +157,10 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
                             <argument>${openapi.generated}</argument>
                             <argument>--policy-output</argument>
                             <argument>${auth-policy.generated}</argument>
+                            <argument>--cedar-output</argument>
+                            <argument>${auth-policy-cedar.generated}</argument>
+                            <argument>--module</argument>
+                            <argument>${auth-policy.module}</argument>
                         </arguments>
                     </configuration>
                 </execution>
@@ -306,7 +315,7 @@ labs64:
 
 4. **`@PublicEndpoint`**: Bypasses both interceptors. The path must also be in `labs64.auth-context.public-paths` to pass the filter.
 
-## The `/.well-known/auth-policy` endpoint
+## The `/.well-known/auth-policy` endpoints
 
 When `auth-policy.json` is on the classpath (Step 2c's `add-resource`), the
 starter auto-registers a controller serving it verbatim at
@@ -314,9 +323,18 @@ starter auto-registers a controller serving it verbatim at
 modules via the `labs64.io/auth-policy=true` Service label and fetches this
 endpoint in-cluster to build its edge authorization table.
 
-- The path is **unconditionally public** in `AuthContextFilter` — it cannot be
-  disabled via `public-paths`, because the ACS must reach it before it can
-  authorize anything.
+The same controller serves the build-generated Tier-1 edge Cedar policy set
+(`auth-policy.cedar`, emitted when the preprocessor is invoked with
+`--cedar-output` + `--module`) at `GET /.well-known/auth-policy.cedar`
+(text/plain; 404 when the module does not generate it). The authproxy fetches
+it alongside the JSON under live discovery — the identical distribution model
+— and evaluates it according to its `CEDAR_MODE` (RFC-05 P2). The `--module`
+name must equal the module's gateway path prefix (e.g. `payment-gateway`),
+because it is baked into the Cedar resource ids.
+
+- Both paths are **unconditionally public** in `AuthContextFilter` — they
+  cannot be disabled via `public-paths`, because the ACS must reach them
+  before it can authorize anything.
 - It is **not** exposed through the external gateway: module IngressRoutes
   only publish API prefixes. The policy content is derived from the OpenAPI
   spec (whose `/v3/api-docs` is public), so no secrets are involved.
