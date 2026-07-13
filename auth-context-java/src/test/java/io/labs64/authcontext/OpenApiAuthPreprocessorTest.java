@@ -94,6 +94,48 @@ class OpenApiAuthPreprocessorTest {
     }
 
     @Test
+    void emitsDomainCedarOnlyForOperationsDeclaringAResource() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments/{id}/pay", map(
+                        "post", map(
+                                "operationId", "payPayment",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:pay"),
+                                        "resource", "Payment"))),
+                "/providers", map(
+                        "get", map(
+                                "operationId", "listPaymentProviders",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment-provider:read"))))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        String cedar = preprocessor.cedarDomainPolicies("payment-gateway", preprocessor.enrich(openApi));
+
+        // domain permit keyed on the operationId action against the typed resource
+        assertThat(cedar).contains("""
+                @id("payment-gateway::payPayment::domain")
+                permit(
+                  principal,
+                  action == Labs64IO::Action::"payPayment",
+                  resource
+                ) when { (context has tenant) && (context.scopes.contains("payment:pay")) };
+                """);
+        // one structural tenant guard for the resource type
+        assertThat(cedar).contains("""
+                @id("payment-gateway::tenant-guard::Payment")
+                forbid(
+                  principal,
+                  action,
+                  resource is Labs64IO::Payment
+                ) when { resource has tenant && !(principal in resource.tenant) };
+                """);
+        // operation without a resource declaration gets NO domain policy
+        assertThat(cedar).doesNotContain("listPaymentProviders");
+    }
+
+    @Test
     void writesCedarOutputWhenRequested() throws IOException {
         Path input = tempDir.resolve("openapi.yaml");
         Files.writeString(input, """

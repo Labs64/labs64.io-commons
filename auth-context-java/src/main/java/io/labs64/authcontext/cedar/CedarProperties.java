@@ -24,11 +24,14 @@ public class CedarProperties {
     private Mode mode = Mode.SHADOW;
 
     /**
-     * Spring resource location of the module's domain Cedar policy set,
-     * validated in CI against the shared schema in
+     * Spring resource location of the module's domain Cedar policy set. This is
+     * the build-generated {@code auth-policy-domain.cedar} (emitted from the
+     * module's OpenAPI {@code x-labs64-auth} by {@code OpenApiAuthPreprocessorCli
+     * --cedar-domain-output}, landing on the classpath) — OpenAPI is the single
+     * source of truth. Validated in CI against the shared schema in
      * {@code labs64.io-commons/auth-policy-cedar/schema.cedarschema}.
      */
-    private String policyLocation = "classpath:cedar/domain.cedar";
+    private String policyLocation = "classpath:auth-policy-domain.cedar";
 
     public boolean isEnabled() {
         return enabled;

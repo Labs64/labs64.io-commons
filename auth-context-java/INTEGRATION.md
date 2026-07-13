@@ -83,9 +83,38 @@ paths:
       # Overrides: scopes changed to my-resource:write
 ```
 
+### Domain (Tier-2) resource authorization
+
+Declare `resource: <Type>` to have the operation authorized in-process by the
+module's `@Authorize` PEP against a typed Cedar resource (RFC-05 P3/P4). This is
+the OpenAPI-native source for the generated domain policy set
+(`auth-policy-domain.cedar`): the preprocessor emits one `permit` keyed on the
+operationId, conditioned on the same `tenant`/`scopes`, plus one structural
+cross-tenant guard per resource type. Operations without `resource` are
+edge-only (coarse reachability).
+
+```yaml
+paths:
+  /payments/{paymentId}/pay:
+    post:
+      operationId: payPayment
+      x-labs64-auth:
+        tenant: true
+        scopes:
+          - payment:pay
+        resource: Payment        # → generated domain permit + tenant guard
+```
+
+The resource `<Type>` must be declared in the shared schema
+(`labs64.io-commons/auth-policy-cedar/schema.cedarschema`), and the module
+supplies the resource's `tenant` at request time via a `CedarEntityResolver`.
+Fine-grained resource-attribute rules (workflow status, ownership) are **not**
+expressible from OpenAPI — they stay in the service layer (and later Postgres
+RLS), by design.
+
 ### Mutual exclusion rules
 
-- `public: true` cannot coexist with `tenant` or `scopes`
+- `public: true` cannot coexist with `tenant`, `scopes`, or `resource`
 - If none of `public`, `tenant`, or `scopes` are set, the endpoint is treated as public
 
 ## Step 2: Configure the Maven Build
@@ -103,10 +132,13 @@ Add three things to your `pom.xml`:
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
     <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.json</auth-policy.generated>
-    <!-- Tier-1 edge Cedar policies (RFC-05 P2). auth-policy.module MUST equal
-         the module's gateway path prefix (e.g. payment-gateway) — it is baked
-         into the Cedar resource ids. -->
+    <!-- Cedar policies generated from x-labs64-auth (RFC-05 P2/P3/P4).
+         auth-policy.module MUST equal the module's gateway path prefix (e.g.
+         payment-gateway) — it is baked into the Cedar resource ids.
+         edge   → auth-policy.cedar        (Tier 1, served to the ACS/traefik)
+         domain → auth-policy-domain.cedar (Tier 2, module @Authorize PEP) -->
     <auth-policy-cedar.generated>${project.build.directory}/generated-resources/auth-policy.cedar</auth-policy-cedar.generated>
+    <auth-policy-cedar-domain.generated>${project.build.directory}/generated-resources/auth-policy-domain.cedar</auth-policy-cedar-domain.generated>
     <auth-policy.module>your-module</auth-policy.module>
 </properties>
 ```
@@ -159,6 +191,8 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
                             <argument>${auth-policy.generated}</argument>
                             <argument>--cedar-output</argument>
                             <argument>${auth-policy-cedar.generated}</argument>
+                            <argument>--cedar-domain-output</argument>
+                            <argument>${auth-policy-cedar-domain.generated}</argument>
                             <argument>--module</argument>
                             <argument>${auth-policy.module}</argument>
                         </arguments>
@@ -323,7 +357,7 @@ starter auto-registers a controller serving it verbatim at
 modules via the `labs64.io/auth-policy=true` Service label and fetches this
 endpoint in-cluster to build its edge authorization table.
 
-The same controller serves the build-generated Tier-1 edge Cedar policy set
+The same controller serves the build-generated **Tier-1 edge** Cedar policy set
 (`auth-policy.cedar`, emitted when the preprocessor is invoked with
 `--cedar-output` + `--module`) at `GET /.well-known/auth-policy.cedar`
 (text/plain; 404 when the module does not generate it). The authproxy fetches
@@ -331,6 +365,13 @@ it alongside the JSON under live discovery — the identical distribution model
 — and evaluates it according to its `CEDAR_MODE` (RFC-05 P2). The `--module`
 name must equal the module's gateway path prefix (e.g. `payment-gateway`),
 because it is baked into the Cedar resource ids.
+
+The **Tier-2 domain** set (`auth-policy-domain.cedar`, from
+`--cedar-domain-output`) is **not** served over the well-known endpoint — it is
+consumed only in-process by this module's `@Authorize` PEP from the classpath
+(`labs64.auth.cedar.policy-location`, default `classpath:auth-policy-domain.cedar`).
+Both files are generated from the one `x-labs64-auth` source, so traefik and the
+module enforce the same OpenAPI-derived contract.
 
 - Both paths are **unconditionally public** in `AuthContextFilter` — they
   cannot be disabled via `public-paths`, because the ACS must reach them

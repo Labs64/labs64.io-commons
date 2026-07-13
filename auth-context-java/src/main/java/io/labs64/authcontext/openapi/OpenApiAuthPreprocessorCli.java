@@ -18,13 +18,15 @@ public final class OpenApiAuthPreprocessorCli {
         Path openApiOutput = requiredPath(options, "--openapi-output");
         Path policyOutput = requiredPath(options, "--policy-output");
         String cedarOutput = options.get("--cedar-output");
+        String cedarDomainOutput = options.get("--cedar-domain-output");
         String module = options.get("--module");
-        if (cedarOutput != null && (module == null || module.isBlank())) {
+        if ((cedarOutput != null || cedarDomainOutput != null) && (module == null || module.isBlank())) {
             throw usage();
         }
 
         new OpenApiAuthPreprocessor().process(input, openApiOutput, policyOutput,
-                cedarOutput == null ? null : Path.of(cedarOutput), module);
+                cedarOutput == null ? null : Path.of(cedarOutput), module,
+                cedarDomainOutput == null ? null : Path.of(cedarDomainOutput));
     }
 
     private static Map<String, String> parseArgs(final String[] args) {
@@ -53,6 +55,7 @@ public final class OpenApiAuthPreprocessorCli {
     private static IllegalArgumentException usage() {
         return new IllegalArgumentException("Usage: OpenApiAuthPreprocessorCli --input <openapi.yaml> "
                 + "--openapi-output <generated-openapi.yaml> --policy-output <auth-policy.json> "
-                + "[--cedar-output <module.cedar> --module <name>]");
+                + "[--cedar-output <edge.cedar>] [--cedar-domain-output <domain.cedar>] "
+                + "[--module <name>] (module required when either cedar output is given)");
     }
 }

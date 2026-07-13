@@ -45,24 +45,37 @@ public class OpenApiAuthPreprocessor {
     }
 
     public void process(final Path input, final Path openApiOutput, final Path policyOutput) throws IOException {
-        process(input, openApiOutput, policyOutput, null, null);
+        process(input, openApiOutput, policyOutput, null, null, null);
+    }
+
+    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+            final String module) throws IOException {
+        process(input, openApiOutput, policyOutput, cedarOutput, module, null);
     }
 
     /**
-     * Full pipeline including the generated Tier-1 edge Cedar policy set
-     * (RFC-05 P2). {@code cedarOutput}/{@code module} may be null to skip.
+     * Full pipeline including the generated Cedar policy sets (RFC-05 P2/P3/P4).
+     * OpenAPI stays the single source of truth for enforcement: the same
+     * {@code x-labs64-auth} produces the edge (Tier-1) and domain (Tier-2)
+     * policies. {@code cedarOutput}/{@code module} may be null to skip Cedar;
+     * {@code cedarDomainOutput} may be null to skip only the domain tier.
      */
     public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
-            final String module) throws IOException {
+            final String module, final Path cedarDomainOutput) throws IOException {
         Map<String, Object> openApi = readYaml(input);
         Map<String, Object> policy = enrich(openApi);
         writeYaml(openApiOutput, openApi);
         writeJson(policyOutput, policy);
-        if (cedarOutput != null) {
+        if (cedarOutput != null || cedarDomainOutput != null) {
             if (module == null || module.isBlank()) {
                 throw new IllegalArgumentException("module is required when a cedar output is requested");
             }
+        }
+        if (cedarOutput != null) {
             writeText(cedarOutput, cedarPolicies(module, policy));
+        }
+        if (cedarDomainOutput != null) {
+            writeText(cedarDomainOutput, cedarDomainPolicies(module, policy));
         }
     }
 
@@ -95,6 +108,66 @@ public class OpenApiAuthPreprocessor {
                 cedar.append(" when { ").append(condition).append(" }");
             }
             cedar.append(";\n");
+        }
+        return cedar.toString();
+    }
+
+    /**
+     * Renders the enriched policy document as per-operation Tier-2 DOMAIN Cedar
+     * policies (RFC-05 P3/P4) — the module {@code @Authorize} PEP's policy set,
+     * generated from the SAME {@code x-labs64-auth} as the edge tier so OpenAPI
+     * stays the single source of truth.
+     *
+     * <p>For every operation that declares {@code x-labs64-auth.resource} (the
+     * domain resource type), one {@code permit} keyed on the operationId action
+     * against that resource, conditioned exactly like the edge tier
+     * (tenant/scopes). Per distinct resource type, one structural tenant guard
+     * {@code forbid(..., resource is <Type>) when { resource has tenant &&
+     * !(principal in resource.tenant) }} — the cross-tenant isolation invariant
+     * (F4/F8), kept in Cedar until Postgres RLS lands. Fine-grained
+     * resource-attribute rules (workflow status, ownership) are intentionally
+     * NOT expressible from OpenAPI and stay in the service layer.
+     */
+    @SuppressWarnings("unchecked")
+    public String cedarDomainPolicies(final String module, final Map<String, Object> policy) {
+        StringBuilder cedar = new StringBuilder();
+        cedar.append("// GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
+        cedar.append("// Tier 2 domain policies for module \"").append(module).append("\" (RFC-05 P3/P4).\n");
+
+        List<String> resourceTypes = new ArrayList<>();
+        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
+            Object resourceType = route.get("resource");
+            if (!(resourceType instanceof String type) || type.isBlank()) {
+                continue;
+            }
+            if (!resourceTypes.contains(type)) {
+                resourceTypes.add(type);
+            }
+            String operationId = route.get("operationId") instanceof String id && !id.isBlank() ? id
+                    : String.valueOf(route.get("method")) + ":" + route.get("path");
+            cedar.append('\n');
+            cedar.append("@id(").append(cedarString(module + "::" + operationId + "::domain")).append(")\n");
+            cedar.append("permit(\n");
+            cedar.append("  principal,\n");
+            cedar.append("  action == Labs64IO::Action::").append(cedarString(operationId)).append(",\n");
+            cedar.append("  resource\n");
+            cedar.append(')');
+            String condition = cedarCondition(route);
+            if (!condition.isEmpty()) {
+                cedar.append(" when { ").append(condition).append(" }");
+            }
+            cedar.append(";\n");
+        }
+
+        // One structural tenant guard per resource type (forbid overrides permit).
+        for (String type : resourceTypes) {
+            cedar.append('\n');
+            cedar.append("@id(").append(cedarString(module + "::tenant-guard::" + type)).append(")\n");
+            cedar.append("forbid(\n");
+            cedar.append("  principal,\n");
+            cedar.append("  action,\n");
+            cedar.append("  resource is Labs64IO::").append(type).append('\n');
+            cedar.append(") when { resource has tenant && !(principal in resource.tenant) };\n");
         }
         return cedar.toString();
     }
@@ -200,6 +273,9 @@ public class OpenApiAuthPreprocessor {
         route.put("public", auth.isPublic());
         route.put("tenantRequired", auth.tenantRequired());
         route.put("scopes", auth.scopes());
+        if (auth.resourceType() != null) {
+            route.put("resource", auth.resourceType());
+        }
         return route;
     }
 

@@ -136,11 +136,6 @@ public class CedarAuthorizationService {
         EntityUID uid = typeName(service ? "Service" : "User").of(context.userId());
         Map<String, Value> attrs = new HashMap<>();
         attrs.put("scopes", stringList(context.scopes()));
-        if (!service) {
-            // No MFA signal in the header contract yet (future additive
-            // X-Auth-MFA); the schema attribute is required, so pin it false.
-            attrs.put("mfaVerified", new PrimBool(false));
-        }
         Set<EntityUID> parents = new HashSet<>();
         if (context.tenantId() != null) {
             parents.add(tenantUid(context.tenantId()));
