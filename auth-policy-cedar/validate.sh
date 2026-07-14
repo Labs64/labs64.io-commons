@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unified Cedar CI gate (RFC-05 P1). Two checks, both must pass:
+# Unified Cedar CI gate. Two checks, both must pass:
 #
 #   1. VALIDATE   every edge + domain policy against the ONE shared schema
 #                 (§5.1). This is the single-schema, no-drift gate (P5/F3): a

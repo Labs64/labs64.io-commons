@@ -1,5 +1,5 @@
 {
-  "description": "Canonical AuthContext -> Cedar request serialization (RFC-05 P1, §5.4). The platform SDK's @Authorize PEP (Java + Python, P2/P3) MUST build the Cedar principal/context from an AuthContext exactly as specified here, so both languages produce identical Cedar requests for the same trusted headers. Schema: auth-policy-cedar/schema.cedarschema. This is the cross-language contract for the Cedar layer, mirroring auth-context-vectors.json for the header layer.",
+  "description": "Canonical AuthContext -> Cedar request serialization. The platform SDK's @Authorize PEP (Java + Python, P2/P3) MUST build the Cedar principal/context from an AuthContext exactly as specified here, so both languages produce identical Cedar requests for the same trusted headers. Schema: auth-policy-cedar/schema.cedarschema. This is the cross-language contract for the Cedar layer, mirroring auth-context-vectors.json for the header layer.",
   "schema": "auth-policy-cedar/schema.cedarschema",
   "mapping": {
     "principal": "svc:<name> -> Labs64IO::Service::\"svc:<name>\", else Labs64IO::User::\"<user>\"",

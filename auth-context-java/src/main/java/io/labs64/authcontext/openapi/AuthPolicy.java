@@ -11,7 +11,7 @@ import java.util.Map;
  * <p>{@code resourceType} (optional, {@code x-labs64-auth.resource}) declares
  * the Cedar domain resource type this operation authorizes against — e.g.
  * {@code Payment}. It is the OpenAPI-native source for the generated Tier-2
- * domain policies (RFC-05 P3/P4): only operations that declare it get a domain
+ * domain policies: only operations that declare it get a domain
  * {@code permit} and contribute their type's tenant guard. Absent ⇒ the
  * operation is edge-only (coarse reachability).
  */

@@ -6,8 +6,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One Cedar domain authorization decision — published to every
- * {@link AuthorizationDecisionListener} for auditability (RFC-05 P9/F9:
- * allow AND deny, with the matched policy ids, deterministic and replayable).
+ * {@link AuthorizationDecisionListener} for auditability.
  *
  * @param action       Cedar action id (unqualified)
  * @param resourceType Cedar resource type (unqualified)
@@ -29,5 +28,22 @@ public record AuthorizationDecision(String action, String resourceType, String r
 
     public AuthorizationDecision {
         reasons = reasons == null ? List.of() : List.copyOf(reasons);
+    }
+
+    /** Three-valued decision for logs: {@code allow} / {@code deny} / {@code error}. */
+    public String decision() {
+        return error != null ? "error" : allowed ? "allow" : "deny";
+    }
+
+    /**
+     * Enforcement outcome verb: {@code enforced-allow} / {@code enforced-deny} /
+     * {@code shadow-allow} / {@code shadow-deny}. An errored decision is a deny
+     * (fail-closed), so its outcome carries the blocking action, while
+     * {@link #decision()} still reports {@code error} as the reason.
+     */
+    public String outcome() {
+        String phase = enforced ? "enforced" : "shadow";
+        String result = (allowed && error == null) ? "allow" : "deny";
+        return phase + "-" + result;
     }
 }

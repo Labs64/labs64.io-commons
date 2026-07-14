@@ -54,7 +54,7 @@ public class OpenApiAuthPreprocessor {
     }
 
     /**
-     * Full pipeline including the generated Cedar policy sets (RFC-05 P2/P3/P4).
+     * Full pipeline including the generated Cedar policy sets.
      * OpenAPI stays the single source of truth for enforcement: the same
      * {@code x-labs64-auth} produces the edge (Tier-1) and domain (Tier-2)
      * policies. {@code cedarOutput}/{@code module} may be null to skip Cedar;
@@ -62,6 +62,17 @@ public class OpenApiAuthPreprocessor {
      */
     public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
             final String module, final Path cedarDomainOutput) throws IOException {
+        process(input, openApiOutput, policyOutput, cedarOutput, module, cedarDomainOutput, null);
+    }
+
+    /**
+     * Full pipeline, additionally emitting the flat public-path list consumed by
+     * the backend {@code AuthContextFilter}. {@code publicPathsOutput} may be
+     * null to skip it; see {@link #process(Path, Path, Path, Path, String, Path)}
+     * for the other outputs.
+     */
+    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+            final String module, final Path cedarDomainOutput, final Path publicPathsOutput) throws IOException {
         Map<String, Object> openApi = readYaml(input);
         Map<String, Object> policy = enrich(openApi);
         writeYaml(openApiOutput, openApi);
@@ -77,27 +88,65 @@ public class OpenApiAuthPreprocessor {
         if (cedarDomainOutput != null) {
             writeText(cedarDomainOutput, cedarDomainPolicies(module, policy));
         }
+        if (publicPathsOutput != null) {
+            writeText(publicPathsOutput, publicPathsDocument(policy));
+        }
+    }
+
+    /**
+     * The public operations as {@code <METHOD> <path-template>} entries — the
+     * backend {@code AuthContextFilter}'s public-path source, generated from the
+     * SAME {@code x-labs64-auth.public} as the edge/domain Cedar so no public
+     * path is ever hand-maintained. Only OpenAPI operations appear here; non-API
+     * surfaces (actuator, docs) stay configured prefixes on the filter.
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> publicPaths(final Map<String, Object> policy) {
+        List<String> entries = new ArrayList<>();
+        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
+            if (Boolean.TRUE.equals(route.get("public"))) {
+                entries.add(route.get("method") + " " + route.get("path"));
+            }
+        }
+        return entries;
+    }
+
+    private String publicPathsDocument(final Map<String, Object> policy) {
+        StringBuilder doc = new StringBuilder();
+        doc.append("# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
+        doc.append("# One '<METHOD> <path-template>' per public operation; consumed by AuthContextFilter.\n");
+        for (String entry : publicPaths(policy)) {
+            doc.append(entry).append('\n');
+        }
+        return doc.toString();
     }
 
     /**
      * Renders the enriched policy document as per-operation edge Cedar policies
      * against the shared schema's {@code ApiOperation}/{@code invoke} model.
-     * The three x-labs64-auth patterns translate 1:1 (RFC-05 §5.2): public →
+     * The three x-labs64-auth patterns translate 1:1: public →
      * unconditional permit; tenant → {@code context has tenant}; scopes →
      * any-overlap ({@code ||}) on {@code context.scopes}, matching the
      * authproxy's OR-scope semantics.
+     *
+     * <p>Each permit also carries {@code @path}/{@code @method}/{@code @public}/
+     * {@code @tenantRequired}/{@code @scopes} annotations — the traefik-authproxy's live-discovery path
+     * derives its OpenAPI-template routing table directly from these instead of
+     * fetching a separate {@code auth-policy.json}, so this generated file is
+     * now the single source for both routing and the authorization decision.
      */
     @SuppressWarnings("unchecked")
     public String cedarPolicies(final String module, final Map<String, Object> policy) {
         StringBuilder cedar = new StringBuilder();
         cedar.append("// GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
-        cedar.append("// Tier 1 edge policies for module \"").append(module).append("\" (RFC-05 P2).\n");
+        cedar.append("// Tier 1 edge policies for module \"").append(module).append("\".\n");
         for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
             String operationId = route.get("operationId") instanceof String id && !id.isBlank() ? id
                     : route.get("method") + ":" + route.get("path");
             String entityId = cedarString(module + "::" + operationId);
             cedar.append('\n');
             cedar.append("@id(").append(entityId).append(")\n");
+            cedar.append(routingAnnotations(route));
             cedar.append("permit(\n");
             cedar.append("  principal,\n");
             cedar.append("  action == Labs64IO::Action::\"invoke\",\n");
@@ -113,8 +162,31 @@ public class OpenApiAuthPreprocessor {
     }
 
     /**
+     * Routing metadata for one route, carried as Cedar annotations so the edge
+     * policy set doubles as the routing table. Booleans
+     * are rendered as the literal strings {@code "true"}/{@code "false"} —
+     * Cedar annotation values are always strings — and scopes are a single
+     * comma-joined string (scope tokens never contain commas).
+     */
+    @SuppressWarnings("unchecked")
+    private String routingAnnotations(final Map<String, Object> route) {
+        List<String> scopes = (List<String>) route.get("scopes");
+        String scopesCsv = scopes == null ? "" : String.join(",", scopes);
+        StringBuilder ann = new StringBuilder();
+        ann.append("@path(").append(cedarString(String.valueOf(route.get("path")))).append(")\n");
+        ann.append("@method(").append(cedarString(String.valueOf(route.get("method")))).append(")\n");
+        ann.append("@public(").append(cedarString(String.valueOf(Boolean.TRUE.equals(route.get("public")))))
+                .append(")\n");
+        ann.append("@tenantRequired(")
+                .append(cedarString(String.valueOf(Boolean.TRUE.equals(route.get("tenantRequired")))))
+                .append(")\n");
+        ann.append("@scopes(").append(cedarString(scopesCsv)).append(")\n");
+        return ann.toString();
+    }
+
+    /**
      * Renders the enriched policy document as per-operation Tier-2 DOMAIN Cedar
-     * policies (RFC-05 P3/P4) — the module {@code @Authorize} PEP's policy set,
+     * policies — the module {@code @Authorize} PEP's policy set,
      * generated from the SAME {@code x-labs64-auth} as the edge tier so OpenAPI
      * stays the single source of truth.
      *
@@ -132,7 +204,7 @@ public class OpenApiAuthPreprocessor {
     public String cedarDomainPolicies(final String module, final Map<String, Object> policy) {
         StringBuilder cedar = new StringBuilder();
         cedar.append("// GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
-        cedar.append("// Tier 2 domain policies for module \"").append(module).append("\" (RFC-05 P3/P4).\n");
+        cedar.append("// Tier 2 domain policies for module \"").append(module).append("\".\n");
 
         List<String> resourceTypes = new ArrayList<>();
         for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {

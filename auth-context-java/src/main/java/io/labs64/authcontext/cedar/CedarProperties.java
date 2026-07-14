@@ -3,7 +3,7 @@ package io.labs64.authcontext.cedar;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration for the Cedar domain PEP (RFC-05 P3).
+ * Configuration for the Cedar domain PEP.
  *
  * <p>{@code labs64.auth.cedar.enabled=true} plus the optional
  * {@code com.cedarpolicy:cedar-java} dependency activate the

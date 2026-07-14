@@ -86,7 +86,7 @@ paths:
 ### Domain (Tier-2) resource authorization
 
 Declare `resource: <Type>` to have the operation authorized in-process by the
-module's `@Authorize` PEP against a typed Cedar resource (RFC-05 P3/P4). This is
+module's `@Authorize` PEP against a typed Cedar resource. This is
 the OpenAPI-native source for the generated domain policy set
 (`auth-policy-domain.cedar`): the preprocessor emits one `permit` keyed on the
 operationId, conditioned on the same `tenant`/`scopes`, plus one structural
@@ -132,7 +132,7 @@ Add three things to your `pom.xml`:
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
     <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.json</auth-policy.generated>
-    <!-- Cedar policies generated from x-labs64-auth (RFC-05 P2/P3/P4).
+    <!-- Cedar policies generated from x-labs64-auth.
          auth-policy.module MUST equal the module's gateway path prefix (e.g.
          payment-gateway) — it is baked into the Cedar resource ids.
          edge   → auth-policy.cedar        (Tier 1, served to the ACS/traefik)
@@ -360,11 +360,20 @@ endpoint in-cluster to build its edge authorization table.
 The same controller serves the build-generated **Tier-1 edge** Cedar policy set
 (`auth-policy.cedar`, emitted when the preprocessor is invoked with
 `--cedar-output` + `--module`) at `GET /.well-known/auth-policy.cedar`
-(text/plain; 404 when the module does not generate it). The authproxy fetches
-it alongside the JSON under live discovery — the identical distribution model
-— and evaluates it according to its `CEDAR_MODE` (RFC-05 P2). The `--module`
-name must equal the module's gateway path prefix (e.g. `payment-gateway`),
-because it is baked into the Cedar resource ids.
+(text/plain; 404 when the module does not generate it). Each generated permit
+also carries `@path`/`@method`/`@public`/`@tenantRequired`/`@scopes`
+annotations — the same fields `auth-policy.json`'s routes carry — so this one
+file doubles as the OpenAPI-template routing table. **The traefik-authproxy's
+live-discovery path fetches only `auth-policy.cedar`** (not the JSON document)
+and rebuilds its routing table from those annotations
+(`policy_store.parse_cedar_document`), then evaluates it for the
+authorization decision according to `CEDAR_MODE`. `auth-policy.json` is still
+served and still on the classpath — it remains the routing source for the
+**signed-bundle** policy path (`policy_bundle.py`, which packages
+`modules/<name>.json` today) — but a module integrating only for live
+discovery must serve `auth-policy.cedar` for the ACS to route to it at all.
+The `--module` name must equal the module's gateway path prefix (e.g.
+`payment-gateway`), because it is baked into the Cedar resource ids.
 
 The **Tier-2 domain** set (`auth-policy-domain.cedar`, from
 `--cedar-domain-output`) is **not** served over the well-known endpoint — it is
@@ -432,7 +441,7 @@ paths:
 
 ### Generated outputs
 
-**auth-policy.json**:
+**auth-policy.json** (signed-bundle routing source):
 ```json
 {
   "version": 1,
@@ -445,6 +454,21 @@ paths:
     "scopes": ["audit-event:write"]
   }]
 }
+```
+
+**auth-policy.cedar** (live-discovery routing + decision source — same fields, as annotations):
+```
+@id("auditflow::publishEvent")
+@path("/audit/publish")
+@method("POST")
+@public("false")
+@tenantRequired("true")
+@scopes("audit-event:write")
+permit(
+  principal,
+  action == Labs64IO::Action::"invoke",
+  resource == Labs64IO::ApiOperation::"auditflow::publishEvent"
+) when { (context has tenant) && (context.scopes.contains("audit-event:write")) };
 ```
 
 **Generated AuditEventApi.java**:
@@ -486,3 +510,24 @@ Add your paths to `labs64.auth-context.public-paths` or ensure the gateway sends
 ### Annotations not enforced
 
 Ensure `auth-context-spring-boot-starter` is on the classpath and `labs64.auth-context.enabled` is not set to `false`.
+
+## Reading @Authorize enforcement logs
+
+Each `@Authorize` decision emits a non-sensitive summary on `io.labs64.authcontext.cedar.LoggingDecisionListener`:
+
+```
+cedar-domain outcome=<enforced|shadow>-<allow|deny> decision=<allow|deny|error> \
+  mode=<enforce|shadow> action=<a> resourceType=<t> reasons=<policyIds|-> requestId=<id>
+```
+
+INFO for a clean allow, WARN for deny/error.
+
+Sensitive fields (user, tenant, resolved resource id, raw error) ride the dedicated `io.labs64.authcontext.cedar.detail` logger at DEBUG, off by default. Enable it during the Cedar testing phase, e.g. in `application.yaml`:
+
+```yaml
+logging:
+  level:
+    io.labs64.authcontext.cedar.detail: DEBUG
+```
+
+The detail line emits `cedar-detail requestId=<id> user=<user> tenant=<tenant> resource=<type>::<id>[ error=<err>]`, shareable with the summary for joining via `requestId`.

@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository. Read this before making chang
 
 ## What this is
 
-Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, plus the unified Cedar authorization assets (RFC-05): the shared schema/policies in `auth-policy-cedar/` and the `@Authorize` Cedar domain PEP in the Java starter (`io.labs64.authcontext.cedar`, feature-flagged via `labs64.auth.cedar.*`, engine = optional `com.cedarpolicy:cedar-java:uber` dependency).
+Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, plus the unified Cedar authorization assets: the shared schema/policies in `auth-policy-cedar/` and the `@Authorize` Cedar domain PEP in the Java starter (`io.labs64.authcontext.cedar`, feature-flagged via `labs64.auth.cedar.*`, engine = optional `com.cedarpolicy:cedar-java:uber` dependency).
 
 ## Critical guardrails
 
@@ -22,7 +22,7 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 |---|---|
 | `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` (incl. `@Authorize` Cedar domain PEP) |
 | `auth-context-python/` | `auth-context-python` (package `auth_context`) |
-| `auth-policy-cedar/` | THE shared Cedar schema + reference policies + `validate.sh` CI gate (RFC-05) |
+| `auth-policy-cedar/` | THE shared Cedar schema + reference policies + `validate.sh` CI gate |
 | `test-vectors/` | Canonical cross-language behavior vectors (headers + Cedar request construction) |
 
 ## Commands
