@@ -4,8 +4,8 @@
 default:
     @just --list
 
-# build + test both libraries
-build: java python
+# build + test all libraries
+build: java openapi python
 
 # build + test the Java starter
 java:
@@ -14,6 +14,14 @@ java:
 # install the Java starter into the local Maven repository
 install-java:
     cd auth-context-java && mvn -B -ntp -DskipTests clean install
+
+# build + test the OpenAPI starter
+openapi:
+    cd openapi-spring-boot-starter && mvn -B -ntp clean test
+
+# install the OpenAPI starter into the local Maven repository
+install-openapi:
+    cd openapi-spring-boot-starter && mvn -B -ntp -DskipTests clean install
 
 # create the Python venv with dev dependencies
 python-venv:
