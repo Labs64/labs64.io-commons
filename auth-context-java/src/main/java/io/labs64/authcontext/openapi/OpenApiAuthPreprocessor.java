@@ -62,6 +62,17 @@ public class OpenApiAuthPreprocessor {
      */
     public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
             final String module, final Path cedarDomainOutput) throws IOException {
+        process(input, openApiOutput, policyOutput, cedarOutput, module, cedarDomainOutput, null);
+    }
+
+    /**
+     * Full pipeline, additionally emitting the flat public-path list consumed by
+     * the backend {@code AuthContextFilter}. {@code publicPathsOutput} may be
+     * null to skip it; see {@link #process(Path, Path, Path, Path, String, Path)}
+     * for the other outputs.
+     */
+    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+            final String module, final Path cedarDomainOutput, final Path publicPathsOutput) throws IOException {
         Map<String, Object> openApi = readYaml(input);
         Map<String, Object> policy = enrich(openApi);
         writeYaml(openApiOutput, openApi);
@@ -77,6 +88,37 @@ public class OpenApiAuthPreprocessor {
         if (cedarDomainOutput != null) {
             writeText(cedarDomainOutput, cedarDomainPolicies(module, policy));
         }
+        if (publicPathsOutput != null) {
+            writeText(publicPathsOutput, publicPathsDocument(policy));
+        }
+    }
+
+    /**
+     * The public operations as {@code <METHOD> <path-template>} entries — the
+     * backend {@code AuthContextFilter}'s public-path source, generated from the
+     * SAME {@code x-labs64-auth.public} as the edge/domain Cedar so no public
+     * path is ever hand-maintained. Only OpenAPI operations appear here; non-API
+     * surfaces (actuator, docs) stay configured prefixes on the filter.
+     */
+    @SuppressWarnings("unchecked")
+    public List<String> publicPaths(final Map<String, Object> policy) {
+        List<String> entries = new ArrayList<>();
+        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
+            if (Boolean.TRUE.equals(route.get("public"))) {
+                entries.add(route.get("method") + " " + route.get("path"));
+            }
+        }
+        return entries;
+    }
+
+    private String publicPathsDocument(final Map<String, Object> policy) {
+        StringBuilder doc = new StringBuilder();
+        doc.append("# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
+        doc.append("# One '<METHOD> <path-template>' per public operation; consumed by AuthContextFilter.\n");
+        for (String entry : publicPaths(policy)) {
+            doc.append(entry).append('\n');
+        }
+        return doc.toString();
     }
 
     /**

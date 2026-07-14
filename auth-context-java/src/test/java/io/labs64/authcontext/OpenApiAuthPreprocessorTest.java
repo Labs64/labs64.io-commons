@@ -191,6 +191,59 @@ class OpenApiAuthPreprocessorTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void publicPathsListsOnlyPublicOperationsWithMethod() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payment-definitions", map(
+                        "get", map("operationId", "listPaymentDefinitions",
+                                "x-labs64-auth", map("public", true))),
+                "/providers/{provider}/webhooks", map(
+                        "post", map("operationId", "handleProviderWebhook",
+                                "x-labs64-auth", map("public", true))),
+                "/payments", map(
+                        "get", map("operationId", "listPayments",
+                                "x-labs64-auth", map("tenant", true,
+                                        "scopes", List.of("payment:read"))))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        List<String> publicPaths = preprocessor.publicPaths(preprocessor.enrich(openApi));
+
+        assertThat(publicPaths).containsExactlyInAnyOrder(
+                "GET /payment-definitions",
+                "POST /providers/{provider}/webhooks");
+    }
+
+    @Test
+    void writesPublicPathsOutputWhenRequested() throws IOException {
+        Path input = tempDir.resolve("openapi.yaml");
+        Files.writeString(input, """
+                openapi: 3.0.3
+                paths:
+                  /payment-definitions:
+                    get:
+                      operationId: listPaymentDefinitions
+                      x-labs64-auth:
+                        public: true
+                  /payments:
+                    get:
+                      operationId: listPayments
+                      x-labs64-auth:
+                        tenant: true
+                        scopes:
+                          - payment:read
+                """);
+        Path publicPathsOutput = tempDir.resolve("auth-public-paths");
+
+        new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"),
+                tempDir.resolve("policy.json"), null, null, null, publicPathsOutput);
+
+        String content = Files.readString(publicPathsOutput);
+        assertThat(content).contains("GET /payment-definitions");
+        assertThat(content).doesNotContain("/payments");
+        assertThat(content).startsWith("#");
+    }
+
+    @Test
     void writesPolicyAsJson() throws IOException {
         Path input = tempDir.resolve("openapi.yaml");
         Path openApiOutput = tempDir.resolve("generated-openapi.yaml");
