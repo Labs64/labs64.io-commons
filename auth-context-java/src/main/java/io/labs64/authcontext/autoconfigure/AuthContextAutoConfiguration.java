@@ -9,7 +9,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import io.labs64.authcontext.authorization.RequireScopesInterceptor;
 import io.labs64.authcontext.authorization.RequireTenantInterceptor;
@@ -68,8 +67,9 @@ public class AuthContextAutoConfiguration {
     }
 
     @Bean
-    @ConditionalOnMissingBean
-    public WebMvcConfigurer authContextWebMvcConfigurer(AuthContextArgumentResolver authContextArgumentResolver,
+    @ConditionalOnMissingBean(AuthContextWebMvcConfigurer.class)
+    public AuthContextWebMvcConfigurer authContextWebMvcConfigurer(
+            AuthContextArgumentResolver authContextArgumentResolver,
             RequireTenantInterceptor requireTenantInterceptor,
             RequireScopesInterceptor requireScopesInterceptor) {
         return new AuthContextWebMvcConfigurer(authContextArgumentResolver, requireTenantInterceptor,
