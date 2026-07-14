@@ -40,7 +40,7 @@ jobs:
           pip install -q -e ".[dev]"
           pytest -q
 
-  # RFC-05 P1 — unified Cedar schema & policy gates. Edge + domain policies
+  # Edge + domain policies
   # validate against ONE shared schema (no-drift, F3), and a cross-tenant
   # isolation gate proves the tenant guard denies across-tenant access (F4/F8).
   cedar:

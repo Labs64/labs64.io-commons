@@ -6,12 +6,12 @@ import java.lang.reflect.Method;
 import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.web.method.HandlerMethod;
 
-final class AuthAnnotationSupport {
+public final class AuthAnnotationSupport {
 
     private AuthAnnotationSupport() {
     }
 
-    static <A extends Annotation> A find(final HandlerMethod handlerMethod, final Class<A> annotationType) {
+    public static <A extends Annotation> A find(final HandlerMethod handlerMethod, final Class<A> annotationType) {
         A annotation = AnnotatedElementUtils.findMergedAnnotation(handlerMethod.getMethod(), annotationType);
         if (annotation != null) {
             return annotation;

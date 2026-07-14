@@ -1,21 +1,19 @@
 [
   { "uid": { "type": "Labs64IO::Tenant", "id": "t_100" },
-    "attrs": { "plan": "pro", "region": "eu" }, "parents": [] },
+    "attrs": {}, "parents": [] },
   { "uid": { "type": "Labs64IO::Tenant", "id": "t_200" },
-    "attrs": { "plan": "free", "region": "us" }, "parents": [] },
+    "attrs": {}, "parents": [] },
 
   { "uid": { "type": "Labs64IO::User", "id": "alice" },
-    "attrs": { "scopes": ["payment:refund"], "mfaVerified": true },
+    "attrs": { "scopes": ["payment:pay"] },
     "parents": [{ "type": "Labs64IO::Tenant", "id": "t_100" }] },
   { "uid": { "type": "Labs64IO::User", "id": "mallory" },
-    "attrs": { "scopes": ["payment:refund"], "mfaVerified": true },
+    "attrs": { "scopes": ["payment:pay"] },
     "parents": [{ "type": "Labs64IO::Tenant", "id": "t_200" }] },
 
   { "uid": { "type": "Labs64IO::Payment", "id": "pay_1" },
     "attrs": {
-      "tenant": { "type": "Labs64IO::Tenant", "id": "t_100" },
-      "owner":  { "type": "Labs64IO::User",   "id": "alice" },
-      "amount": 1000, "status": "captured", "psp": "stripe"
+      "tenant": { "type": "Labs64IO::Tenant", "id": "t_100" }
     },
     "parents": [{ "type": "Labs64IO::Tenant", "id": "t_100" }] }
 ]

@@ -32,16 +32,23 @@ public class AuthContextFilter extends OncePerRequestFilter {
 
     private final AuthContextProperties properties;
     private final AuthContextParser parser;
+    private final PublicPathMatcher publicPathMatcher;
 
     public AuthContextFilter(AuthContextProperties properties, AuthContextParser parser) {
+        this(properties, parser, PublicPathMatcher.empty());
+    }
+
+    public AuthContextFilter(AuthContextProperties properties, AuthContextParser parser,
+            PublicPathMatcher publicPathMatcher) {
         this.properties = properties;
         this.parser = parser;
+        this.publicPathMatcher = publicPathMatcher;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        boolean publicPath = isPublicPath(request.getRequestURI());
+        boolean publicPath = isPublicPath(request.getMethod(), request.getRequestURI());
         AuthContext context;
         try {
             context = parser.parse(request::getHeader).orElse(null);
@@ -80,12 +87,19 @@ public class AuthContextFilter extends OncePerRequestFilter {
         }
     }
 
-    private boolean isPublicPath(String uri) {
-        if (AuthPolicyController.AUTH_POLICY_PATH.equals(uri)) {
+    private boolean isPublicPath(String method, String uri) {
+        if (AuthPolicyController.AUTH_POLICY_PATH.equals(uri)
+                || AuthPolicyController.AUTH_POLICY_CEDAR_PATH.equals(uri)) {
             // Always public: the ACS must be able to fetch the policy that
             // gates everything else, regardless of configured public-paths.
             return true;
         }
+        // OpenAPI operations: matched per method+template from the build-generated
+        // list (derived from x-labs64-auth.public) — OpenAPI is the source of truth.
+        if (publicPathMatcher.matches(method, uri)) {
+            return true;
+        }
+        // Non-OpenAPI surfaces (actuator, docs, error): configured prefixes.
         for (String prefix : properties.getPublicPaths()) {
             if (uri.startsWith(prefix)) {
                 return true;

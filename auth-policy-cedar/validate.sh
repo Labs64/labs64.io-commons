@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unified Cedar CI gate (RFC-05 P1). Two checks, both must pass:
+# Unified Cedar CI gate. Two checks, both must pass:
 #
 #   1. VALIDATE   every edge + domain policy against the ONE shared schema
 #                 (§5.1). This is the single-schema, no-drift gate (P5/F3): a
@@ -47,18 +47,18 @@ assert_decision() {
 }
 
 echo "== 2. cross-tenant isolation gate (combined edge + domain policy set)"
-# Positive control: owner, same tenant, mfa, scope -> ALLOW.
-assert_decision "alice refunds own payment (t_100)" "ALLOW" \
+# Positive control: same tenant, READY payment, payment:pay scope -> ALLOW.
+assert_decision "alice pays same-tenant READY payment (t_100)" "ALLOW" \
   --principal 'Labs64IO::User::"alice"' \
-  --action 'Labs64IO::Action::"refundPayment"' \
+  --action 'Labs64IO::Action::"payPayment"' \
   --resource 'Labs64IO::Payment::"pay_1"' \
   --context "$DIR/tests/ctx_t100.json"
 
-# The invariant: mallory has payment:refund (edge permit would fire) but is in a
-# DIFFERENT tenant than the payment -> the domain forbid guard MUST deny.
-assert_decision "mallory refunds cross-tenant payment (t_200 -> t_100)" "DENY" \
+# The invariant: mallory has payment:pay (the scope permit would fire) but is in
+# a DIFFERENT tenant than the payment -> the domain forbid guard MUST deny.
+assert_decision "mallory pays cross-tenant payment (t_200 -> t_100)" "DENY" \
   --principal 'Labs64IO::User::"mallory"' \
-  --action 'Labs64IO::Action::"refundPayment"' \
+  --action 'Labs64IO::Action::"payPayment"' \
   --resource 'Labs64IO::Payment::"pay_1"' \
   --context "$DIR/tests/ctx_t200.json"
 

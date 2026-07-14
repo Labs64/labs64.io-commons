@@ -1,0 +1,3 @@
+# GENERATED test fixture — mirrors the build-generated auth-public-paths format.
+GET /payment-definitions
+POST /providers/{provider}/webhooks

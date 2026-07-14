@@ -1,49 +1,87 @@
-// Tier 2 — DOMAIN policy set (RFC-05 §5.3). Fine-grained resource/owner/tenant/
-// workflow rules, enforced in-process by each module's @Authorize PEP.
+// Tier 2 — DOMAIN reference policy set.
+//
+// In production these are GENERATED from each module's x-labs64-auth by the
+// commons OpenApiAuthPreprocessor (--cedar-domain-output) and loaded by the
+// module @Authorize PEP; this file is the reference set the shared schema is
+// validated against and the cross-tenant isolation gate runs on (validate.sh).
+//
+// Two things per module, both derivable from OpenAPI (the single source of
+// truth): one permit per domain-authorized operation (action = operationId,
+// conditioned on tenant/scopes exactly like the edge tier), and one structural
+// tenant guard per resource type. `forbid` overrides `permit`, so a principal
+// acting across tenants is denied even with a valid scope (F4/F8/P6).
+// Fine-grained status/ownership rules are NOT here — OpenAPI cannot express
+// them; they stay in the service layer (and later Postgres RLS).
 
-// ── Tenant isolation baseline (F4/F8) ──
-// Structural guard: no principal may act on a resource outside its tenant. The
-// cross-tenant isolation gate (tests/) proves this holds against the whole set;
-// `forbid` overrides any `permit`, so no policy combination can grant across
-// tenants. `principal in resource` holds because both are `in [Tenant]` and the
-// adversarial fixtures put them in different tenants.
-forbid(principal, action, resource)
-unless { principal in resource.tenant };
-
-// ── Owner-only refund (replaces payment-gateway's hard-coded if — F6) ──
+// ── payment-gateway (resource: Payment) ──
+@id("payment-gateway::getPayment::domain")
 permit(
   principal,
-  action == Labs64IO::Action::"refundPayment",
+  action == Labs64IO::Action::"getPayment",
   resource
-) when {
-  principal == resource.owner
-  && resource.status == "captured"
-  && principal.scopes.contains("payment:refund")
-  && principal.mfaVerified
-};
+) when { (context has tenant) && (context.scopes.contains("payment:read")) };
 
-// ── AuditFlow PII gate ──
-permit(
-  principal == Labs64IO::Service::"auditflow-publisher",
-  action == Labs64IO::Action::"publishAudit",
-  resource
-) when { !resource.pii || (context has redacted && context.redacted) };
-
-// ── Service-to-service confused-deputy guard ──
-// checkout-be may capture a payment only on behalf of the payment's owner.
-permit(
-  principal == Labs64IO::Service::"checkout-be",
-  action == Labs64IO::Action::"capturePayment",
-  resource
-) when {
-  context has onBehalfOf
-  && context.onBehalfOf == resource.owner
-  && principal.scopes.contains("payment:capture")
-};
-
-// ── Customer-portal tier gating (FeBAC foundation) ──
+@id("payment-gateway::payPayment::domain")
 permit(
   principal,
-  action == Labs64IO::Action::"manageAccount",
+  action == Labs64IO::Action::"payPayment",
   resource
-) when { resource.tier == "free" || principal.scopes.contains("portal:premium") };
+) when { (context has tenant) && (context.scopes.contains("payment:pay")) };
+
+@id("payment-gateway::closePayment::domain")
+permit(
+  principal,
+  action == Labs64IO::Action::"closePayment",
+  resource
+) when { (context has tenant) && (context.scopes.contains("payment:write")) };
+
+@id("payment-gateway::tenant-guard::Payment")
+forbid(
+  principal,
+  action,
+  resource is Labs64IO::Payment
+) when { resource has tenant && !(principal in resource.tenant) };
+
+// ── checkout (resource: PurchaseOrder) ──
+@id("checkout::getPurchaseOrder::domain")
+permit(
+  principal,
+  action == Labs64IO::Action::"getPurchaseOrder",
+  resource
+) when { (context has tenant) && (context.scopes.contains("purchase-order:read")) };
+
+@id("checkout::updatePurchaseOrder::domain")
+permit(
+  principal,
+  action == Labs64IO::Action::"updatePurchaseOrder",
+  resource
+) when { (context has tenant) && (context.scopes.contains("purchase-order:write")) };
+
+@id("checkout::checkoutPurchaseOrder::domain")
+permit(
+  principal,
+  action == Labs64IO::Action::"checkoutPurchaseOrder",
+  resource
+) when { (context has tenant) && (context.scopes.contains("purchase-order:checkout")) };
+
+@id("checkout::tenant-guard::PurchaseOrder")
+forbid(
+  principal,
+  action,
+  resource is Labs64IO::PurchaseOrder
+) when { resource has tenant && !(principal in resource.tenant) };
+
+// ── auditflow (resource: AuditEvent; tenant optional — platform events) ──
+@id("auditflow::publishEvent::domain")
+permit(
+  principal,
+  action == Labs64IO::Action::"publishEvent",
+  resource
+) when { (context.scopes.contains("audit-event:write")) };
+
+@id("auditflow::tenant-guard::AuditEvent")
+forbid(
+  principal,
+  action,
+  resource is Labs64IO::AuditEvent
+) when { resource has tenant && !(principal in resource.tenant) };

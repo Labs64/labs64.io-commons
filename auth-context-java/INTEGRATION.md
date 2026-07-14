@@ -13,7 +13,7 @@ OpenAPI spec (with x-labs64-auth)
     → auth-policy.json (gateway route policy)
   → openapi-generator (generates Java interfaces with annotations)
   → auth-context-spring-boot-starter (runtime enforcement)
-  → GET /.well-known/auth-policy (runtime, served by the starter for the gateway ACS)
+  → GET /.well-known/auth-policy + /.well-known/auth-policy.cedar (runtime, served by the starter for the gateway ACS)
 ```
 
 1. **Author**: Add `x-labs64-auth` to each endpoint in your OpenAPI spec
@@ -83,9 +83,38 @@ paths:
       # Overrides: scopes changed to my-resource:write
 ```
 
+### Domain (Tier-2) resource authorization
+
+Declare `resource: <Type>` to have the operation authorized in-process by the
+module's `@Authorize` PEP against a typed Cedar resource. This is
+the OpenAPI-native source for the generated domain policy set
+(`auth-policy-domain.cedar`): the preprocessor emits one `permit` keyed on the
+operationId, conditioned on the same `tenant`/`scopes`, plus one structural
+cross-tenant guard per resource type. Operations without `resource` are
+edge-only (coarse reachability).
+
+```yaml
+paths:
+  /payments/{paymentId}/pay:
+    post:
+      operationId: payPayment
+      x-labs64-auth:
+        tenant: true
+        scopes:
+          - payment:pay
+        resource: Payment        # → generated domain permit + tenant guard
+```
+
+The resource `<Type>` must be declared in the shared schema
+(`labs64.io-commons/auth-policy-cedar/schema.cedarschema`), and the module
+supplies the resource's `tenant` at request time via a `CedarEntityResolver`.
+Fine-grained resource-attribute rules (workflow status, ownership) are **not**
+expressible from OpenAPI — they stay in the service layer (and later Postgres
+RLS), by design.
+
 ### Mutual exclusion rules
 
-- `public: true` cannot coexist with `tenant` or `scopes`
+- `public: true` cannot coexist with `tenant`, `scopes`, or `resource`
 - If none of `public`, `tenant`, or `scopes` are set, the endpoint is treated as public
 
 ## Step 2: Configure the Maven Build
@@ -103,6 +132,14 @@ Add three things to your `pom.xml`:
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
     <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.json</auth-policy.generated>
+    <!-- Cedar policies generated from x-labs64-auth.
+         auth-policy.module MUST equal the module's gateway path prefix (e.g.
+         payment-gateway) — it is baked into the Cedar resource ids.
+         edge   → auth-policy.cedar        (Tier 1, served to the ACS/traefik)
+         domain → auth-policy-domain.cedar (Tier 2, module @Authorize PEP) -->
+    <auth-policy-cedar.generated>${project.build.directory}/generated-resources/auth-policy.cedar</auth-policy-cedar.generated>
+    <auth-policy-cedar-domain.generated>${project.build.directory}/generated-resources/auth-policy-domain.cedar</auth-policy-cedar-domain.generated>
+    <auth-policy.module>your-module</auth-policy.module>
 </properties>
 ```
 
@@ -152,6 +189,12 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
                             <argument>${openapi.generated}</argument>
                             <argument>--policy-output</argument>
                             <argument>${auth-policy.generated}</argument>
+                            <argument>--cedar-output</argument>
+                            <argument>${auth-policy-cedar.generated}</argument>
+                            <argument>--cedar-domain-output</argument>
+                            <argument>${auth-policy-cedar-domain.generated}</argument>
+                            <argument>--module</argument>
+                            <argument>${auth-policy.module}</argument>
                         </arguments>
                     </configuration>
                 </execution>
@@ -306,7 +349,7 @@ labs64:
 
 4. **`@PublicEndpoint`**: Bypasses both interceptors. The path must also be in `labs64.auth-context.public-paths` to pass the filter.
 
-## The `/.well-known/auth-policy` endpoint
+## The `/.well-known/auth-policy` endpoints
 
 When `auth-policy.json` is on the classpath (Step 2c's `add-resource`), the
 starter auto-registers a controller serving it verbatim at
@@ -314,9 +357,34 @@ starter auto-registers a controller serving it verbatim at
 modules via the `labs64.io/auth-policy=true` Service label and fetches this
 endpoint in-cluster to build its edge authorization table.
 
-- The path is **unconditionally public** in `AuthContextFilter` — it cannot be
-  disabled via `public-paths`, because the ACS must reach it before it can
-  authorize anything.
+The same controller serves the build-generated **Tier-1 edge** Cedar policy set
+(`auth-policy.cedar`, emitted when the preprocessor is invoked with
+`--cedar-output` + `--module`) at `GET /.well-known/auth-policy.cedar`
+(text/plain; 404 when the module does not generate it). Each generated permit
+also carries `@path`/`@method`/`@public`/`@tenantRequired`/`@scopes`
+annotations — the same fields `auth-policy.json`'s routes carry — so this one
+file doubles as the OpenAPI-template routing table. **The traefik-authproxy's
+live-discovery path fetches only `auth-policy.cedar`** (not the JSON document)
+and rebuilds its routing table from those annotations
+(`policy_store.parse_cedar_document`), then evaluates it for the
+authorization decision according to `CEDAR_MODE`. `auth-policy.json` is still
+served and still on the classpath — it remains the routing source for the
+**signed-bundle** policy path (`policy_bundle.py`, which packages
+`modules/<name>.json` today) — but a module integrating only for live
+discovery must serve `auth-policy.cedar` for the ACS to route to it at all.
+The `--module` name must equal the module's gateway path prefix (e.g.
+`payment-gateway`), because it is baked into the Cedar resource ids.
+
+The **Tier-2 domain** set (`auth-policy-domain.cedar`, from
+`--cedar-domain-output`) is **not** served over the well-known endpoint — it is
+consumed only in-process by this module's `@Authorize` PEP from the classpath
+(`labs64.auth.cedar.policy-location`, default `classpath:auth-policy-domain.cedar`).
+Both files are generated from the one `x-labs64-auth` source, so traefik and the
+module enforce the same OpenAPI-derived contract.
+
+- Both paths are **unconditionally public** in `AuthContextFilter` — they
+  cannot be disabled via `public-paths`, because the ACS must reach them
+  before it can authorize anything.
 - It is **not** exposed through the external gateway: module IngressRoutes
   only publish API prefixes. The policy content is derived from the OpenAPI
   spec (whose `/v3/api-docs` is public), so no secrets are involved.
@@ -373,7 +441,7 @@ paths:
 
 ### Generated outputs
 
-**auth-policy.json**:
+**auth-policy.json** (signed-bundle routing source):
 ```json
 {
   "version": 1,
@@ -386,6 +454,21 @@ paths:
     "scopes": ["audit-event:write"]
   }]
 }
+```
+
+**auth-policy.cedar** (live-discovery routing + decision source — same fields, as annotations):
+```
+@id("auditflow::publishEvent")
+@path("/audit/publish")
+@method("POST")
+@public("false")
+@tenantRequired("true")
+@scopes("audit-event:write")
+permit(
+  principal,
+  action == Labs64IO::Action::"invoke",
+  resource == Labs64IO::ApiOperation::"auditflow::publishEvent"
+) when { (context has tenant) && (context.scopes.contains("audit-event:write")) };
 ```
 
 **Generated AuditEventApi.java**:
@@ -427,3 +510,24 @@ Add your paths to `labs64.auth-context.public-paths` or ensure the gateway sends
 ### Annotations not enforced
 
 Ensure `auth-context-spring-boot-starter` is on the classpath and `labs64.auth-context.enabled` is not set to `false`.
+
+## Reading @Authorize enforcement logs
+
+Each `@Authorize` decision emits a non-sensitive summary on `io.labs64.authcontext.cedar.LoggingDecisionListener`:
+
+```
+cedar-domain outcome=<enforced|shadow>-<allow|deny> decision=<allow|deny|error> \
+  mode=<enforce|shadow> action=<a> resourceType=<t> reasons=<policyIds|-> requestId=<id>
+```
+
+INFO for a clean allow, WARN for deny/error.
+
+Sensitive fields (user, tenant, resolved resource id, raw error) ride the dedicated `io.labs64.authcontext.cedar.detail` logger at DEBUG, off by default. Enable it during the Cedar testing phase, e.g. in `application.yaml`:
+
+```yaml
+logging:
+  level:
+    io.labs64.authcontext.cedar.detail: DEBUG
+```
+
+The detail line emits `cedar-detail requestId=<id> user=<user> tenant=<tenant> resource=<type>::<id>[ error=<err>]`, shareable with the summary for joining via `requestId`.

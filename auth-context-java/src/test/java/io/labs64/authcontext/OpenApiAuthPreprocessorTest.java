@@ -33,7 +33,8 @@ class OpenApiAuthPreprocessorTest {
                                 "x-labs64-auth", map(
                                         "tenant", true,
                                         "scopes", List.of("payment:read"))),
-                        "post", map("operationId", "createPayment")),
+                        "post", map("operationId", "createPayment",
+                                "x-labs64-auth", map("public", true))),
                 "/health", map(
                         "get", map(
                                 "operationId", "health",
@@ -59,6 +60,190 @@ class OpenApiAuthPreprocessorTest {
     }
 
     @Test
+    void emitsEdgeCedarPoliciesPerOperation() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments", map(
+                        "get", map(
+                                "operationId", "listPayments",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:read", "payment:admin")))),
+                "/health", map(
+                        "get", map(
+                                "operationId", "health",
+                                "x-labs64-auth", map("public", true)))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        String cedar = preprocessor.cedarPolicies("payment-gateway", preprocessor.enrich(openApi));
+
+        assertThat(cedar).contains("""
+                @id("payment-gateway::listPayments")
+                @path("/payments")
+                @method("GET")
+                @public("false")
+                @tenantRequired("true")
+                @scopes("payment:read,payment:admin")
+                permit(
+                  principal,
+                  action == Labs64IO::Action::"invoke",
+                  resource == Labs64IO::ApiOperation::"payment-gateway::listPayments"
+                ) when { (context has tenant) && (context.scopes.contains("payment:read") || context.scopes.contains("payment:admin")) };
+                """);
+        assertThat(cedar).contains("""
+                @id("payment-gateway::health")
+                @path("/health")
+                @method("GET")
+                @public("true")
+                @tenantRequired("false")
+                @scopes("")
+                permit(
+                  principal,
+                  action == Labs64IO::Action::"invoke",
+                  resource == Labs64IO::ApiOperation::"payment-gateway::health"
+                );
+                """);
+    }
+
+    @Test
+    void routingAnnotationsPreservePathTemplateBraces() {
+        // Path-templated routes are the routing-table's hard case: the
+        // traefik-authproxy's cedarpy-based parser reads @path back out of the
+        // generated policy JSON verbatim, so the {param} braces must not get
+        // mangled by Cedar string-literal escaping.
+        Map<String, Object> openApi = map("paths", map(
+                "/payments/{id}", map(
+                        "get", map(
+                                "operationId", "getPayment",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:write"))))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        String cedar = preprocessor.cedarPolicies("payment-gateway", preprocessor.enrich(openApi));
+
+        assertThat(cedar).contains("@path(\"/payments/{id}\")");
+        assertThat(cedar).contains("@method(\"GET\")");
+        assertThat(cedar).contains("@public(\"false\")");
+        assertThat(cedar).contains("@tenantRequired(\"true\")");
+        assertThat(cedar).contains("@scopes(\"payment:write\")");
+    }
+
+    @Test
+    void emitsDomainCedarOnlyForOperationsDeclaringAResource() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments/{id}/pay", map(
+                        "post", map(
+                                "operationId", "payPayment",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:pay"),
+                                        "resource", "Payment"))),
+                "/providers", map(
+                        "get", map(
+                                "operationId", "listPaymentProviders",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment-provider:read"))))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        String cedar = preprocessor.cedarDomainPolicies("payment-gateway", preprocessor.enrich(openApi));
+
+        // domain permit keyed on the operationId action against the typed resource
+        assertThat(cedar).contains("""
+                @id("payment-gateway::payPayment::domain")
+                permit(
+                  principal,
+                  action == Labs64IO::Action::"payPayment",
+                  resource
+                ) when { (context has tenant) && (context.scopes.contains("payment:pay")) };
+                """);
+        // one structural tenant guard for the resource type
+        assertThat(cedar).contains("""
+                @id("payment-gateway::tenant-guard::Payment")
+                forbid(
+                  principal,
+                  action,
+                  resource is Labs64IO::Payment
+                ) when { resource has tenant && !(principal in resource.tenant) };
+                """);
+        // operation without a resource declaration gets NO domain policy
+        assertThat(cedar).doesNotContain("listPaymentProviders");
+    }
+
+    @Test
+    void writesCedarOutputWhenRequested() throws IOException {
+        Path input = tempDir.resolve("openapi.yaml");
+        Files.writeString(input, """
+                openapi: 3.0.3
+                paths:
+                  /health:
+                    get:
+                      operationId: health
+                      x-labs64-auth:
+                        public: true
+                """);
+        Path cedarOutput = tempDir.resolve("module.cedar");
+
+        new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"), tempDir.resolve("policy.json"),
+                cedarOutput, "auditflow");
+
+        assertThat(Files.readString(cedarOutput)).contains("Labs64IO::ApiOperation::\"auditflow::health\"");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void publicPathsListsOnlyPublicOperationsWithMethod() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payment-definitions", map(
+                        "get", map("operationId", "listPaymentDefinitions",
+                                "x-labs64-auth", map("public", true))),
+                "/providers/{provider}/webhooks", map(
+                        "post", map("operationId", "handleProviderWebhook",
+                                "x-labs64-auth", map("public", true))),
+                "/payments", map(
+                        "get", map("operationId", "listPayments",
+                                "x-labs64-auth", map("tenant", true,
+                                        "scopes", List.of("payment:read"))))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        List<String> publicPaths = preprocessor.publicPaths(preprocessor.enrich(openApi));
+
+        assertThat(publicPaths).containsExactlyInAnyOrder(
+                "GET /payment-definitions",
+                "POST /providers/{provider}/webhooks");
+    }
+
+    @Test
+    void writesPublicPathsOutputWhenRequested() throws IOException {
+        Path input = tempDir.resolve("openapi.yaml");
+        Files.writeString(input, """
+                openapi: 3.0.3
+                paths:
+                  /payment-definitions:
+                    get:
+                      operationId: listPaymentDefinitions
+                      x-labs64-auth:
+                        public: true
+                  /payments:
+                    get:
+                      operationId: listPayments
+                      x-labs64-auth:
+                        tenant: true
+                        scopes:
+                          - payment:read
+                """);
+        Path publicPathsOutput = tempDir.resolve("auth-public-paths");
+
+        new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"),
+                tempDir.resolve("policy.json"), null, null, null, publicPathsOutput);
+
+        String content = Files.readString(publicPathsOutput);
+        assertThat(content).contains("GET /payment-definitions");
+        assertThat(content).doesNotContain("/payments");
+        assertThat(content).startsWith("#");
+    }
+
+    @Test
     void writesPolicyAsJson() throws IOException {
         Path input = tempDir.resolve("openapi.yaml");
         Path openApiOutput = tempDir.resolve("generated-openapi.yaml");
@@ -81,6 +266,33 @@ class OpenApiAuthPreprocessorTest {
         assertThat(policyJson).startsWith("{");
         assertThat(policy).containsEntry("version", 1);
         assertThat(openApiOutput).exists();
+    }
+
+    @Test
+    void throwsExceptionWhenNoAuthDetailsProvided() {
+        Map<String, Object> openApi = map("paths", map(
+                "/health", map(
+                        "get", map(
+                                "operationId", "health"))));
+
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
+                .withMessageContaining("must declare either 'public: true' or specify 'tenant'/'scopes'");
+    }
+
+    @Test
+    void throwsExceptionWhenDomainResourceDeclaredWithoutTenant() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments", map(
+                        "post", map(
+                                "operationId", "createPayment",
+                                "x-labs64-auth", map(
+                                        "scopes", List.of("payment:write"),
+                                        "resource", "Payment")))));
+
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
+                .withMessageContaining("must require a tenant when declaring a domain resource");
     }
 
     private static Map<String, Object> map(final Object... entries) {

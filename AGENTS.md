@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository. Read this before making chang
 
 ## What this is
 
-Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract.
+Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, plus the unified Cedar authorization assets: the shared schema/policies in `auth-policy-cedar/` and the `@Authorize` Cedar domain PEP in the Java starter (`io.labs64.authcontext.cedar`, feature-flagged via `labs64.auth.cedar.*`, engine = optional `com.cedarpolicy:cedar-java:uber` dependency).
 
 ## Critical guardrails
 
@@ -14,14 +14,16 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 4. **No mandatory runtime dependencies in the Python package.** FastAPI/httpx integrations import lazily; the core must stay dependency-free.
 5. **Fail closed.** Non-public paths without a valid user identity return 401. Never weaken this default.
 6. **Value sanitization pattern `^[a-zA-Z0-9_.:-]+$`** must match the ACS (traefik-authproxy) exactly.
+7. **One Cedar schema.** `auth-policy-cedar/schema.cedarschema` is the single type system for BOTH authorization tiers (edge + every module's domain policies). Schema changes must keep `just cedar` green and stay in sync with `test-vectors/cedar-request-vectors.json` — the AuthContext→Cedar request contract the Java/Python PEPs are pinned to.
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` |
+| `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` (incl. `@Authorize` Cedar domain PEP) |
 | `auth-context-python/` | `auth-context-python` (package `auth_context`) |
-| `test-vectors/` | Canonical cross-language behavior vectors |
+| `auth-policy-cedar/` | THE shared Cedar schema + reference policies + `validate.sh` CI gate |
+| `test-vectors/` | Canonical cross-language behavior vectors (headers + Cedar request construction) |
 
 ## Commands
 
@@ -31,6 +33,7 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 | Java tests | `cd auth-context-java && mvn test` |
 | Python tests | `cd auth-context-python && .venv/bin/pytest` (after `just python-venv`) |
 | Install Java lib locally | `just install-java` |
+| Cedar schema/policy gate | `just cedar` (requires `cargo install cedar-policy-cli`) |
 
 ## Conventions
 
