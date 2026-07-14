@@ -486,3 +486,24 @@ Add your paths to `labs64.auth-context.public-paths` or ensure the gateway sends
 ### Annotations not enforced
 
 Ensure `auth-context-spring-boot-starter` is on the classpath and `labs64.auth-context.enabled` is not set to `false`.
+
+## Reading @Authorize enforcement logs
+
+Each `@Authorize` decision emits a non-sensitive summary on `io.labs64.authcontext.cedar.LoggingDecisionListener`:
+
+```
+cedar-domain outcome=<enforced|shadow>-<allow|deny> decision=<allow|deny|error> \
+  mode=<enforce|shadow> action=<a> resourceType=<t> reasons=<policyIds|-> requestId=<id>
+```
+
+INFO for a clean allow, WARN for deny/error.
+
+Sensitive fields (user, tenant, resolved resource id, raw error) ride the dedicated `io.labs64.authcontext.cedar.detail` logger at DEBUG, off by default. Enable it during the Cedar testing phase, e.g. in `application.yaml`:
+
+```yaml
+logging:
+  level:
+    io.labs64.authcontext.cedar.detail: DEBUG
+```
+
+The detail line emits `cedar-detail requestId=<id> user=<user> tenant=<tenant> resource=<type>::<id>[ error=<err>]`, shareable with the summary for joining via `requestId`.
