@@ -33,7 +33,8 @@ class OpenApiAuthPreprocessorTest {
                                 "x-labs64-auth", map(
                                         "tenant", true,
                                         "scopes", List.of("payment:read"))),
-                        "post", map("operationId", "createPayment")),
+                        "post", map("operationId", "createPayment",
+                                "x-labs64-auth", map("public", true))),
                 "/health", map(
                         "get", map(
                                 "operationId", "health",
@@ -178,6 +179,33 @@ class OpenApiAuthPreprocessorTest {
         assertThat(policyJson).startsWith("{");
         assertThat(policy).containsEntry("version", 1);
         assertThat(openApiOutput).exists();
+    }
+
+    @Test
+    void throwsExceptionWhenNoAuthDetailsProvided() {
+        Map<String, Object> openApi = map("paths", map(
+                "/health", map(
+                        "get", map(
+                                "operationId", "health"))));
+
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
+                .withMessageContaining("must declare either 'public: true' or specify 'tenant'/'scopes'");
+    }
+
+    @Test
+    void throwsExceptionWhenDomainResourceDeclaredWithoutTenant() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments", map(
+                        "post", map(
+                                "operationId", "createPayment",
+                                "x-labs64-auth", map(
+                                        "scopes", List.of("payment:write"),
+                                        "resource", "Payment")))));
+
+        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
+                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
+                .withMessageContaining("must require a tenant when declaring a domain resource");
     }
 
     private static Map<String, Object> map(final Object... entries) {

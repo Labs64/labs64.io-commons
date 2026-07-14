@@ -17,9 +17,13 @@ import java.util.Map;
  */
 record AuthPolicy(Object raw, boolean isPublic, boolean tenantRequired, List<String> scopes, String resourceType) {
 
-    static AuthPolicy from(final Object value) {
+    static AuthPolicy from(final Object value, boolean isRequired) {
         if (value == null) {
-            return publicEndpoint(null);
+            if (isRequired) {
+                throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
+                        + " must declare either 'public: true' or specify 'tenant'/'scopes'");
+            }
+            return new AuthPolicy(null, false, false, List.of(), null);
         }
         if (!(value instanceof Map<?, ?> map)) {
             throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION + " must be an object");
@@ -39,9 +43,14 @@ record AuthPolicy(Object raw, boolean isPublic, boolean tenantRequired, List<Str
                     + " cannot be public and declare a domain resource at the same time");
         }
         if (!publicEndpoint && !tenantRequired && scopes.isEmpty()) {
-            return publicEndpoint(value);
+            throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
+                    + " must declare either 'public: true' or specify 'tenant'/'scopes'");
         }
-        return new AuthPolicy(value, false, tenantRequired, scopes, resourceType);
+        if (resourceType != null && !tenantRequired) {
+            throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
+                    + " must require a tenant when declaring a domain resource");
+        }
+        return new AuthPolicy(value, publicEndpoint, tenantRequired, scopes, resourceType);
     }
 
     private static AuthPolicy publicEndpoint(final Object raw) {

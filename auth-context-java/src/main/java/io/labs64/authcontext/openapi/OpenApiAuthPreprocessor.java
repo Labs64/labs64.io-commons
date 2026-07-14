@@ -203,7 +203,7 @@ public class OpenApiAuthPreprocessor {
         for (Map.Entry<String, Object> pathEntry : paths.entrySet()) {
             String path = pathEntry.getKey();
             Map<String, Object> pathItem = asMap(pathEntry.getValue(), "paths." + path);
-            AuthPolicy pathAuth = AuthPolicy.from(pathItem.get(AUTH_EXTENSION));
+            AuthPolicy pathAuth = AuthPolicy.from(pathItem.get(AUTH_EXTENSION), false);
 
             for (Map.Entry<String, Object> operationEntry : pathItem.entrySet()) {
                 String method = operationEntry.getKey().toLowerCase(Locale.ROOT);
@@ -213,7 +213,7 @@ public class OpenApiAuthPreprocessor {
 
                 Map<String, Object> operation = asMap(operationEntry.getValue(), method.toUpperCase(Locale.ROOT)
                         + " " + path);
-                AuthPolicy auth = AuthPolicy.from(operation.getOrDefault(AUTH_EXTENSION, pathAuth.raw()));
+                AuthPolicy auth = AuthPolicy.from(operation.getOrDefault(AUTH_EXTENSION, pathAuth.raw()), true);
 
                 List<String> extraAnnotations = extraAnnotations(operation.get(EXTRA_ANNOTATION_EXTENSION));
                 extraAnnotations.addAll(annotations(auth));
