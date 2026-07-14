@@ -11,12 +11,17 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerMapping;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import io.labs64.authcontext.core.AuthContext;
 import io.labs64.authcontext.core.AuthContextHolder;
 
@@ -130,6 +135,26 @@ class AuthorizeInterceptorTest {
     @Test
     void missingAuthContextPassesInShadow() throws Exception {
         assertThat(invoke(interceptor(CedarProperties.Mode.SHADOW), "payPayment")).isTrue();
+    }
+
+    @Test
+    void enforce401NoContextEmitsWarnSummary() throws Exception {
+        Logger log = (Logger) LoggerFactory.getLogger(AuthorizeInterceptor.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        log.addAppender(appender);
+        try {
+            boolean proceed = invoke(interceptor(CedarProperties.Mode.ENFORCE), "payPayment");
+            assertThat(proceed).isFalse();
+            assertThat(response.getStatus()).isEqualTo(401);
+            assertThat(appender.list).anySatisfy(e -> {
+                assertThat(e.getLevel()).isEqualTo(Level.WARN);
+                assertThat(e.getFormattedMessage())
+                        .contains("outcome=enforced-deny", "reason=no-auth-context", "action=payPayment");
+            });
+        } finally {
+            log.detachAppender(appender);
+        }
     }
 
     @Test

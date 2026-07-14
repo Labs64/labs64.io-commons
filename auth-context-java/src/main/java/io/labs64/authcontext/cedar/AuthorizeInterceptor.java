@@ -65,10 +65,13 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
             // The AuthContextFilter fails closed before us on protected paths;
             // this is defense in depth for misconfigured public paths.
             if (service.isEnforcing()) {
+                logger.warn("cedar-domain outcome=enforced-deny decision=deny mode=enforce "
+                        + "action={} reason=no-auth-context requestId=-", annotation.action());
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                 return false;
             }
-            logger.warn("cedar-domain action={} skipped: no AuthContext (shadow)", annotation.action());
+            logger.warn("cedar-domain outcome=shadow-deny decision=deny mode=shadow "
+                    + "action={} reason=no-auth-context requestId=-", annotation.action());
             return true;
         }
 
