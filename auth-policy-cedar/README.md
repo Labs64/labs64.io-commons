@@ -1,9 +1,9 @@
-# Unified Cedar schema & policies (RFC-05 P1, extended in P2/P3)
+# Unified Cedar schema & policies
 
 The **single source of truth** for authorization types across both tiers. The
 edge tier (authproxy PEP) and the domain tier (module SDK PEP) validate their
 policies against the one `schema.cedarschema` here, in one CI step — which is
-what makes split-authorization drift (RFC-05 **F3**) a validation failure rather
+what makes split-authorization drift a validation failure rather
 than a review miss.
 
 ```
@@ -67,7 +67,7 @@ more; **both** policy tiers are generated from it.
 
 `../test-vectors/cedar-request-vectors.json` pins how an `AuthContext` serializes
 into a Cedar request (principal + context), so the Java and Python `@Authorize`
-PEPs (RFC-05 P2/P3) build identical requests from the same trusted headers —
+PEPs build identical requests from the same trusted headers —
 the Cedar-layer analogue of `auth-context-vectors.json`.
 
 ## Relationship to the running system

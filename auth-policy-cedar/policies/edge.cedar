@@ -1,4 +1,4 @@
-// Tier 1 — EDGE policy set (RFC-05 §5.2). Coarse "can this identity reach this
+// Tier 1 — EDGE policy set. Coarse "can this identity reach this
 // operation at all?" — replaces the authproxy's auth-policy.json scope logic.
 //
 // In production these are GENERATED from each module's x-labs64-auth by the

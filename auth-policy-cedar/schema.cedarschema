@@ -1,10 +1,10 @@
-// Labs64.IO unified Cedar schema (RFC-05 §5.1) — the SINGLE type system for
+// Labs64.IO unified Cedar schema — the SINGLE type system for
 // both authorization tiers. The edge tier (authproxy PEP) and the domain tier
 // (module SDK PEP) validate their policies against THIS one schema in one CI
 // step, which is what makes split-authorization drift (F3) a validation failure
 // rather than a review miss.
 //
-// Aligned with the legacy auth-policy.json contract (RFC-05, 2026-07-13):
+// Aligned with the legacy auth-policy.json contract:
 // OpenAPI (`x-labs64-auth`) is the single source of truth for enforcement, and
 // it expresses only per-operation reachability — public / tenant / scopes. The
 // schema therefore carries only what that contract expresses:

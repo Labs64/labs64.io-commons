@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Fine-grained Cedar domain authorization on a handler method (RFC-05 P3).
+ * Fine-grained Cedar domain authorization on a handler method.
  *
  * <p>Additive to the coarse {@code @RequireScopes}/{@code @RequireTenant}
  * pre-filters: those stay as fast gates, Cedar is the authoritative

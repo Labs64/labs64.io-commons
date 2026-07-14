@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
- * The {@code @Authorize} PEP (RFC-05 P3): runs after the coarse
+ * The {@code @Authorize} PEP: runs after the coarse
  * {@code @RequireTenant}/{@code @RequireScopes} pre-filters, resolves the
  * domain resource through the module's {@link CedarEntityResolver}, asks the
  * Cedar PDP, publishes the decision to every

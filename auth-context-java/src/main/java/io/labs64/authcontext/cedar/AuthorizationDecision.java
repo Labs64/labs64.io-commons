@@ -6,8 +6,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * One Cedar domain authorization decision — published to every
- * {@link AuthorizationDecisionListener} for auditability (RFC-05 P9/F9:
- * allow AND deny, with the matched policy ids, deterministic and replayable).
+ * {@link AuthorizationDecisionListener} for auditability.
  *
  * @param action       Cedar action id (unqualified)
  * @param resourceType Cedar resource type (unqualified)

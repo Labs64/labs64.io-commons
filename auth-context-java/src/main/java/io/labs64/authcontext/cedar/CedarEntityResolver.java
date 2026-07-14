@@ -7,7 +7,7 @@ import io.labs64.authcontext.core.AuthContext;
 /**
  * Module SPI: turns an {@code @Authorize} resource reference into the Cedar
  * resource entity, supplying the domain attributes (tenant, status, owner, …)
- * the policies decide on. The module owns the resource context — RFC-05
+ * the policies decide on. The module owns the resource context
  * Principle 3.
  *
  * <p>Implementations are regular beans; the interceptor picks the first one

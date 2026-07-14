@@ -1,4 +1,4 @@
-// Tier 2 — DOMAIN reference policy set (RFC-05 §5.3, aligned 2026-07-13).
+// Tier 2 — DOMAIN reference policy set.
 //
 // In production these are GENERATED from each module's x-labs64-auth by the
 // commons OpenApiAuthPreprocessor (--cedar-domain-output) and loaded by the

@@ -22,7 +22,7 @@ import io.labs64.authcontext.core.AuthContext;
 
 /**
  * Pins the AuthContext → Cedar request serialization to the cross-language
- * contract in {@code test-vectors/cedar-request-vectors.json} (RFC-05 §5.4):
+ * contract in {@code test-vectors/cedar-request-vectors.json}:
  * the Java and Python PEPs must build identical Cedar requests for the same
  * trusted headers.
  */

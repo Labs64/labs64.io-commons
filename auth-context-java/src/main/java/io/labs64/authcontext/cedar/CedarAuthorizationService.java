@@ -32,7 +32,7 @@ import io.labs64.authcontext.core.AuthContext;
 import io.labs64.authcontext.core.AuthHeaders;
 
 /**
- * In-process Cedar domain PDP (RFC-05 P3, Tier 2).
+ * In-process Cedar domain PDP.
  *
  * <p>Loads the module's domain policy set once at startup and evaluates
  * {@code @Authorize} checks against it. Request construction follows the

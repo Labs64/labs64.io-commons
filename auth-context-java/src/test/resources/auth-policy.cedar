@@ -1,5 +1,5 @@
 // GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.
-// Tier 1 edge policies for module "test-module" (RFC-05 P2).
+// Tier 1 edge policies for module "test-module".
 
 @id("test-module::ping")
 permit(

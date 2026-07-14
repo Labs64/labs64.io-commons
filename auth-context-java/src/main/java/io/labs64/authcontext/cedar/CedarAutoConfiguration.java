@@ -16,11 +16,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import com.cedarpolicy.BasicAuthorizationEngine;
 
 /**
- * Cedar domain PEP wiring (RFC-05 P3). Doubly opt-in: the module must add the
+ * Cedar domain PEP wiring. Doubly opt-in: the module must add the
  * optional {@code com.cedarpolicy:cedar-java} (uber) dependency AND set
  * {@code labs64.auth.cedar.enabled=true}. Registered after the coarse
  * interceptors so {@code @RequireScopes}/{@code @RequireTenant} stay the fast
- * pre-filter (RFC-05 §4.6).
+ * pre-filter.
  */
 @AutoConfiguration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)

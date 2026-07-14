@@ -78,6 +78,11 @@ class OpenApiAuthPreprocessorTest {
 
         assertThat(cedar).contains("""
                 @id("payment-gateway::listPayments")
+                @path("/payments")
+                @method("GET")
+                @public("false")
+                @tenantRequired("true")
+                @scopes("payment:read,payment:admin")
                 permit(
                   principal,
                   action == Labs64IO::Action::"invoke",
@@ -86,12 +91,41 @@ class OpenApiAuthPreprocessorTest {
                 """);
         assertThat(cedar).contains("""
                 @id("payment-gateway::health")
+                @path("/health")
+                @method("GET")
+                @public("true")
+                @tenantRequired("false")
+                @scopes("")
                 permit(
                   principal,
                   action == Labs64IO::Action::"invoke",
                   resource == Labs64IO::ApiOperation::"payment-gateway::health"
                 );
                 """);
+    }
+
+    @Test
+    void routingAnnotationsPreservePathTemplateBraces() {
+        // Path-templated routes are the routing-table's hard case: the
+        // traefik-authproxy's cedarpy-based parser reads @path back out of the
+        // generated policy JSON verbatim, so the {param} braces must not get
+        // mangled by Cedar string-literal escaping.
+        Map<String, Object> openApi = map("paths", map(
+                "/payments/{id}", map(
+                        "get", map(
+                                "operationId", "getPayment",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:write"))))));
+
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        String cedar = preprocessor.cedarPolicies("payment-gateway", preprocessor.enrich(openApi));
+
+        assertThat(cedar).contains("@path(\"/payments/{id}\")");
+        assertThat(cedar).contains("@method(\"GET\")");
+        assertThat(cedar).contains("@public(\"false\")");
+        assertThat(cedar).contains("@tenantRequired(\"true\")");
+        assertThat(cedar).contains("@scopes(\"payment:write\")");
     }
 
     @Test
