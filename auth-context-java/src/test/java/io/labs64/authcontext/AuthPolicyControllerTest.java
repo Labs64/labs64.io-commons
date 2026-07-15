@@ -21,15 +21,6 @@ import io.labs64.authcontext.web.AuthPolicyController;
 class AuthPolicyControllerTest {
 
     @Test
-    void servesClasspathPolicyAsJson() {
-        // src/test/resources/auth-policy.json must exist for this test
-        ResponseEntity<Resource> response = new AuthPolicyController().authPolicy();
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
-        assertTrue(response.getBody().exists());
-    }
-
-    @Test
     void servesClasspathCedarPolicyAsText() {
         // src/test/resources/auth-policy.cedar must exist for this test
         ResponseEntity<Resource> response = new AuthPolicyController().authPolicyCedar();
@@ -40,13 +31,7 @@ class AuthPolicyControllerTest {
 
     @Test
     void pathConstantIsWellKnown() {
-        assertEquals("/.well-known/auth-policy", AuthPolicyController.AUTH_POLICY_PATH);
         assertEquals("/.well-known/auth-policy.cedar", AuthPolicyController.AUTH_POLICY_CEDAR_PATH);
-    }
-
-    @Test
-    void wellKnownAuthPolicyIsAlwaysPublic() throws Exception {
-        assertPathIsPublic(AuthPolicyController.AUTH_POLICY_PATH);
     }
 
     @Test

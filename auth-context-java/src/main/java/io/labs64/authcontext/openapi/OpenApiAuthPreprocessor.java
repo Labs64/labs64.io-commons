@@ -44,13 +44,13 @@ public class OpenApiAuthPreprocessor {
         this.jsonMapper = jsonMapper;
     }
 
-    public void process(final Path input, final Path openApiOutput, final Path policyOutput) throws IOException {
-        process(input, openApiOutput, policyOutput, null, null, null);
+    public void process(final Path input, final Path openApiOutput) throws IOException {
+        process(input, openApiOutput, null, null, null);
     }
 
-    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+    public void process(final Path input, final Path openApiOutput, final Path cedarOutput,
             final String module) throws IOException {
-        process(input, openApiOutput, policyOutput, cedarOutput, module, null);
+        process(input, openApiOutput, cedarOutput, module, null);
     }
 
     /**
@@ -60,9 +60,9 @@ public class OpenApiAuthPreprocessor {
      * policies. {@code cedarOutput}/{@code module} may be null to skip Cedar;
      * {@code cedarDomainOutput} may be null to skip only the domain tier.
      */
-    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+    public void process(final Path input, final Path openApiOutput, final Path cedarOutput,
             final String module, final Path cedarDomainOutput) throws IOException {
-        process(input, openApiOutput, policyOutput, cedarOutput, module, cedarDomainOutput, null);
+        process(input, openApiOutput, cedarOutput, module, cedarDomainOutput, null);
     }
 
     /**
@@ -71,12 +71,11 @@ public class OpenApiAuthPreprocessor {
      * null to skip it; see {@link #process(Path, Path, Path, Path, String, Path)}
      * for the other outputs.
      */
-    public void process(final Path input, final Path openApiOutput, final Path policyOutput, final Path cedarOutput,
+    public void process(final Path input, final Path openApiOutput, final Path cedarOutput,
             final String module, final Path cedarDomainOutput, final Path publicPathsOutput) throws IOException {
         Map<String, Object> openApi = readYaml(input);
         Map<String, Object> policy = enrich(openApi);
         writeYaml(openApiOutput, openApi);
-        writeJson(policyOutput, policy);
         if (cedarOutput != null || cedarDomainOutput != null) {
             if (module == null || module.isBlank()) {
                 throw new IllegalArgumentException("module is required when a cedar output is requested");
@@ -380,13 +379,7 @@ public class OpenApiAuthPreprocessor {
         Files.writeString(output, value);
     }
 
-    private void writeJson(final Path output, final Object value) throws IOException {
-        Path parent = output.toAbsolutePath().getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-        jsonMapper.writeValue(output.toFile(), value);
-    }
+
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(final Object value, final String field) {

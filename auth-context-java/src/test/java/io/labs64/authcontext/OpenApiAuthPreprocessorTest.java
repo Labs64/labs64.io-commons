@@ -184,7 +184,7 @@ class OpenApiAuthPreprocessorTest {
                 """);
         Path cedarOutput = tempDir.resolve("module.cedar");
 
-        new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"), tempDir.resolve("policy.json"),
+        new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"),
                 cedarOutput, "auditflow");
 
         assertThat(Files.readString(cedarOutput)).contains("Labs64IO::ApiOperation::\"auditflow::health\"");
@@ -235,37 +235,12 @@ class OpenApiAuthPreprocessorTest {
         Path publicPathsOutput = tempDir.resolve("auth-public-paths");
 
         new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"),
-                tempDir.resolve("policy.json"), null, null, null, publicPathsOutput);
+                null, null, null, publicPathsOutput);
 
         String content = Files.readString(publicPathsOutput);
         assertThat(content).contains("GET /payment-definitions");
         assertThat(content).doesNotContain("/payments");
         assertThat(content).startsWith("#");
-    }
-
-    @Test
-    void writesPolicyAsJson() throws IOException {
-        Path input = tempDir.resolve("openapi.yaml");
-        Path openApiOutput = tempDir.resolve("generated-openapi.yaml");
-        Path policyOutput = tempDir.resolve("auth-policy.json");
-        Files.writeString(input, """
-                openapi: 3.0.3
-                paths:
-                  /health:
-                    get:
-                      operationId: health
-                      x-labs64-auth:
-                        public: true
-                """);
-
-        new OpenApiAuthPreprocessor().process(input, openApiOutput, policyOutput);
-
-        String policyJson = Files.readString(policyOutput);
-        Map<String, Object> policy = new ObjectMapper().readValue(policyJson, new TypeReference<>() {
-        });
-        assertThat(policyJson).startsWith("{");
-        assertThat(policy).containsEntry("version", 1);
-        assertThat(openApiOutput).exists();
     }
 
     @Test

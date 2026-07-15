@@ -88,8 +88,7 @@ public class AuthContextFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicPath(String method, String uri) {
-        if (AuthPolicyController.AUTH_POLICY_PATH.equals(uri)
-                || AuthPolicyController.AUTH_POLICY_CEDAR_PATH.equals(uri)) {
+        if (AuthPolicyController.AUTH_POLICY_CEDAR_PATH.equals(uri)) {
             // Always public: the ACS must be able to fetch the policy that
             // gates everything else, regardless of configured public-paths.
             return true;

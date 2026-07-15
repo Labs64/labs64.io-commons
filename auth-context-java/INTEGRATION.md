@@ -10,14 +10,14 @@ The pipeline has four stages:
 OpenAPI spec (with x-labs64-auth)
   → OpenApiAuthPreprocessorCli (build-time)
     → Cleaned OpenAPI (annotations injected)
-    → auth-policy.json (gateway route policy)
+    → auth-policy.cedar (gateway route policy)
   → openapi-generator (generates Java interfaces with annotations)
   → auth-context-spring-boot-starter (runtime enforcement)
   → GET /.well-known/auth-policy + /.well-known/auth-policy.cedar (runtime, served by the starter for the gateway ACS)
 ```
 
 1. **Author**: Add `x-labs64-auth` to each endpoint in your OpenAPI spec
-2. **Build-time**: The preprocessor strips the extension, injects Java annotations (`@RequireTenant`, `@RequireScopes`, `@PublicEndpoint`) into the generated OpenAPI, and emits `auth-policy.json`
+2. **Build-time**: The preprocessor strips the extension, injects Java annotations (`@RequireTenant`, `@RequireScopes`, `@PublicEndpoint`) into the generated OpenAPI, and emits `auth-policy.cedar`
 3. **Code generation**: OpenAPI Generator produces Java API interfaces with the injected annotations
 4. **Runtime**: `auth-context-spring-boot-starter` auto-configures filters and interceptors that enforce the annotations
 
@@ -131,7 +131,7 @@ Add three things to your `pom.xml`:
     <exec-maven-plugin.version>3.6.2</exec-maven-plugin.version>
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
-    <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.json</auth-policy.generated>
+    <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.cedar</auth-policy.generated>
     <!-- Cedar policies generated from x-labs64-auth.
          auth-policy.module MUST equal the module's gateway path prefix (e.g.
          payment-gateway) — it is baked into the Cedar resource ids.
@@ -187,8 +187,6 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
                             <argument>${openapi.source}</argument>
                             <argument>--openapi-output</argument>
                             <argument>${openapi.generated}</argument>
-                            <argument>--policy-output</argument>
-                            <argument>${auth-policy.generated}</argument>
                             <argument>--cedar-output</argument>
                             <argument>${auth-policy-cedar.generated}</argument>
                             <argument>--cedar-domain-output</argument>
@@ -233,7 +231,7 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
             </executions>
         </plugin>
 
-        <!-- 3. Build helper: add generated resources (auth-policy.json) to classpath -->
+        <!-- 3. Build helper: add generated resources (auth-policy.cedar) to classpath -->
         <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
@@ -275,10 +273,10 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
 
 Run `mvn clean compile` and check three outputs:
 
-### 1. Generated auth-policy.json
+### 1. Generated auth-policy.cedar
 
 ```bash
-cat target/generated-resources/auth-policy.json
+cat target/generated-resources/auth-policy.cedar
 ```
 
 Should contain route entries for each endpoint:
@@ -351,7 +349,7 @@ labs64:
 
 ## The `/.well-known/auth-policy` endpoints
 
-When `auth-policy.json` is on the classpath (Step 2c's `add-resource`), the
+When `auth-policy.cedar` is on the classpath (Step 2c's `add-resource`), the
 starter auto-registers a controller serving it verbatim at
 `GET /.well-known/auth-policy`. The gateway's traefik-authproxy discovers
 modules via the `labs64.io/auth-policy=true` Service label and fetches this
@@ -362,12 +360,12 @@ The same controller serves the build-generated **Tier-1 edge** Cedar policy set
 `--cedar-output` + `--module`) at `GET /.well-known/auth-policy.cedar`
 (text/plain; 404 when the module does not generate it). Each generated permit
 also carries `@path`/`@method`/`@public`/`@tenantRequired`/`@scopes`
-annotations — the same fields `auth-policy.json`'s routes carry — so this one
+annotations — the same fields `auth-policy.cedar`'s routes carry — so this one
 file doubles as the OpenAPI-template routing table. **The traefik-authproxy's
 live-discovery path fetches only `auth-policy.cedar`** (not the JSON document)
 and rebuilds its routing table from those annotations
 (`policy_store.parse_cedar_document`), then evaluates it for the
-authorization decision according to `CEDAR_MODE`. `auth-policy.json` is still
+authorization decision according to `CEDAR_MODE`. `auth-policy.cedar` is still
 served and still on the classpath — it remains the routing source for the
 **signed-bundle** policy path (`policy_bundle.py`, which packages
 `modules/<name>.json` today) — but a module integrating only for live
@@ -441,7 +439,7 @@ paths:
 
 ### Generated outputs
 
-**auth-policy.json** (signed-bundle routing source):
+**auth-policy.cedar** (signed-bundle routing source):
 ```json
 {
   "version": 1,

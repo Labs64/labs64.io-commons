@@ -75,7 +75,7 @@ CLI:
 cd auth-context-java
 mvn -q exec:java \
   -Dexec.mainClass=io.labs64.authcontext.openapi.OpenApiAuthPreprocessorCli \
-  -Dexec.args="--input openapi.yaml --openapi-output target/generated/openapi.yaml --policy-output target/generated/auth-policy.json"
+  -Dexec.args="--input openapi.yaml --openapi-output target/generated/openapi.yaml --cedar-output target/generated/auth-policy.cedar --module commons"
 ```
 
 ## Related

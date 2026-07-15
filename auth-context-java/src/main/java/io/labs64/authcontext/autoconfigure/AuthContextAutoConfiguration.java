@@ -107,7 +107,7 @@ public class AuthContextAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
-    @ConditionalOnResource(resources = "classpath:auth-policy.json")
+    @ConditionalOnResource(resources = "classpath:auth-policy.cedar")
     public AuthPolicyController authPolicyController() {
         return new AuthPolicyController();
     }

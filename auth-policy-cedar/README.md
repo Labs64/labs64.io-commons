@@ -36,7 +36,7 @@ It performs two checks, both blocking:
    (F4/F8/P6). The gate also keeps a positive control (same-tenant, READY
    payment → allow) so it can't pass vacuously.
 
-## Schema (aligned with auth-policy.json, 2026-07-13)
+## Schema (aligned with auth-policy.cedar, 2026-07-13)
 
 OpenAPI (`x-labs64-auth`) is the single source of truth for enforcement, and it
 expresses only per-operation reachability — `public` / `tenant` / `scopes`
