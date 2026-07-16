@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository. Read this before making chang
 
 ## What this is
 
-Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, plus the unified Cedar authorization assets: the shared schema/policies in `auth-policy-cedar/` and the `@Authorize` Cedar domain PEP in the Java starter (`io.labs64.authcontext.cedar`, feature-flagged via `labs64.auth.cedar.*`, engine = optional `com.cedarpolicy:cedar-java:uber` dependency).
+Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, shared Spring Boot starters, plus the unified Cedar authorization assets: the shared schema/policies in `auth-policy-cedar/` and the `@Authorize` Cedar domain PEP in the Java starter (`io.labs64.authcontext.cedar`, feature-flagged via `labs64.auth.cedar.*`, engine = optional `com.cedarpolicy:cedar-java:uber` dependency).
 
 ## Critical guardrails
 
@@ -20,10 +20,11 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 
 | Path | What |
 |---|---|
-| `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` (incl. `@Authorize` Cedar domain PEP) |
+| `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` |
 | `auth-context-python/` | `auth-context-python` (package `auth_context`) |
 | `auth-policy-cedar/` | THE shared Cedar schema + reference policies + `validate.sh` CI gate |
 | `test-vectors/` | Canonical cross-language behavior vectors (headers + Cedar request construction) |
+| `openapi-spring-boot-starter/` | `io.labs64:openapi-spring-boot-starter` |
 
 ## Commands
 
@@ -31,6 +32,7 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Currently: the auth-
 |---|---|
 | Build + test everything | `just build` |
 | Java tests | `cd auth-context-java && mvn test` |
+| OpenAPI starter tests | `cd openapi-spring-boot-starter && mvn test` |
 | Python tests | `cd auth-context-python && .venv/bin/pytest` (after `just python-venv`) |
 | Install Java lib locally | `just install-java` |
 | Cedar schema/policy gate | `just cedar` (requires `cargo install cedar-policy-cli`) |

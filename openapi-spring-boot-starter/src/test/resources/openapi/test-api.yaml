@@ -1,0 +1,10 @@
+openapi: 3.0.3
+info:
+  title: Test API
+  version: 1.2.3
+  description: Test API description
+  contact:
+    name: Labs64.IO
+    url: https://labs64.io
+    email: info@labs64.io
+paths: {}

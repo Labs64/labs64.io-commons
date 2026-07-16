@@ -9,6 +9,7 @@ Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io)
 | Library | Language | Purpose |
 |---|---|---|
 | [`auth-context-spring-boot-starter`](auth-context-java/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireScopes`, outbound propagation, `@WithAuthContext` test support |
+| [`openapi-spring-boot-starter`](openapi-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Shared springdoc runtime servers, bearer security and canonical OpenAPI metadata configuration |
 | [`auth-context-python`](auth-context-python/) | Python 3.13+ | Mirrored `AuthContext`, ASGI middleware, FastAPI dependencies, httpx propagation hook, pytest fixture |
 
 Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant`, `X-Request-ID`) and are pinned to identical behavior by the shared vectors in [`test-vectors/`](test-vectors/).
@@ -36,8 +37,9 @@ pip install "auth-context-python @ git+https://github.com/Labs64/labs64.io-commo
 ## Development
 
 ```bash
-just build   # build + test both libraries
+just build   # build + test all libraries
 just java    # Java only
+just openapi # OpenAPI starter only
 just python  # Python only
 ```
 

@@ -26,6 +26,8 @@ jobs:
           cache: maven
       - name: Test auth-context-java
         run: cd auth-context-java && mvn -B -ntp test
+      - name: Test openapi-spring-boot-starter
+        run: cd openapi-spring-boot-starter && mvn -B -ntp test
 
   python:
     runs-on: ubuntu-latest
