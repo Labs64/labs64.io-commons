@@ -250,7 +250,7 @@ public class OpenApiAuthPreprocessor {
         }
         List<String> conditions = new ArrayList<>();
         if (Boolean.TRUE.equals(route.get("tenantRequired"))) {
-            conditions.add("(context has tenant)");
+            conditions.add("(context has tenant || principal is Labs64IO::Service)");
         }
         List<String> scopes = (List<String>) route.get("scopes");
         if (scopes != null && !scopes.isEmpty()) {

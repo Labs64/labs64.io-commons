@@ -87,7 +87,7 @@ class OpenApiAuthPreprocessorTest {
                   principal,
                   action == Labs64IO::Action::"invoke",
                   resource == Labs64IO::ApiOperation::"payment-gateway::listPayments"
-                ) when { (context has tenant) && (context.scopes.contains("payment:read") || context.scopes.contains("payment:admin")) };
+                ) when { (context has tenant || principal is Labs64IO::Service) && (context.scopes.contains("payment:read") || context.scopes.contains("payment:admin")) };
                 """);
         assertThat(cedar).contains("""
                 @id("payment-gateway::health")
@@ -155,7 +155,7 @@ class OpenApiAuthPreprocessorTest {
                   principal,
                   action == Labs64IO::Action::"payPayment",
                   resource
-                ) when { (context has tenant) && (context.scopes.contains("payment:pay")) };
+                ) when { (context has tenant || principal is Labs64IO::Service) && (context.scopes.contains("payment:pay")) };
                 """);
         // one structural tenant guard for the resource type
         assertThat(cedar).contains("""
