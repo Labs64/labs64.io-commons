@@ -1,12 +1,28 @@
+# --- Java / Maven ---
 target/
 *.class
+
+# --- Python ---
 __pycache__/
-*.egg-info/
-.pytest_cache/
+*.py[codz]
+*$py.class
 .venv/
+venv/
+.pytest_cache/
+*.egg-info/
 dist/
 build/
-.DS_Store
+
+# --- Environment ---
+.env
+
+# --- IDE / OS ---
 .idea/
-*.iml
 .vscode/
+*.iml
+.DS_Store
+*.swp
+*~
+
+# --- Logs ---
+*.log
