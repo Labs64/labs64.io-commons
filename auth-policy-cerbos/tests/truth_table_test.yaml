@@ -1,0 +1,126 @@
+# RFC-07 decision-equivalence truth table. Encodes the same personas and
+# expectations as the retired Cedar validate.sh + cedar-request-vectors.json —
+# including the cross-tenant isolation invariant (mallory must be denied a
+# same-action pay on another tenant's Payment).
+name: RFC-07 decision equivalence
+description: Edge + domain decision parity, incl. the cross-tenant isolation gate.
+
+principals:
+  anonymous:
+    id: anonymous
+    roles:
+      - user
+    attr:
+      scopes: []
+  alice:
+    id: alice
+    roles:
+      - user
+    attr:
+      tenant: t_100
+      scopes:
+        - payment:pay
+  bob:
+    id: bob
+    roles:
+      - user
+    attr:
+      tenant: t_100
+      scopes: []
+  mallory:
+    id: mallory
+    roles:
+      - user
+    attr:
+      tenant: t_200
+      scopes:
+        - payment:pay
+  svc_batch:
+    id: svc:batch
+    roles:
+      - service
+    attr:
+      scopes:
+        - payment:pay
+
+resources:
+  edge:
+    id: edge
+    kind: payment_gateway_api
+    attr: {}
+  pay_1:
+    id: pay_1
+    kind: Payment
+    attr:
+      tenant: t_100
+
+tests:
+  - name: anonymous may call the public op
+    input:
+      principals: [anonymous]
+      resources: [edge]
+      actions: [listPaymentDefinitions]
+    expected:
+      - principal: anonymous
+        resource: edge
+        actions:
+          listPaymentDefinitions: EFFECT_ALLOW
+
+  - name: anonymous denied the protected edge op
+    input:
+      principals: [anonymous]
+      resources: [edge]
+      actions: [payPayment]
+    expected:
+      - principal: anonymous
+        resource: edge
+        actions:
+          payPayment: EFFECT_DENY
+
+  - name: alice allowed at edge and domain
+    input:
+      principals: [alice]
+      resources: [edge, pay_1]
+      actions: [payPayment]
+    expected:
+      - principal: alice
+        resource: edge
+        actions:
+          payPayment: EFFECT_ALLOW
+      - principal: alice
+        resource: pay_1
+        actions:
+          payPayment: EFFECT_ALLOW
+
+  - name: cross-tenant isolation gate — mallory denied on another tenant's Payment
+    input:
+      principals: [mallory]
+      resources: [pay_1]
+      actions: [payPayment]
+    expected:
+      - principal: mallory
+        resource: pay_1
+        actions:
+          payPayment: EFFECT_DENY
+
+  - name: service principal exempt from the tenant requirement at edge
+    input:
+      principals: [svc_batch]
+      resources: [edge]
+      actions: [payPayment]
+    expected:
+      - principal: svc_batch
+        resource: edge
+        actions:
+          payPayment: EFFECT_ALLOW
+
+  - name: missing scope denied at edge
+    input:
+      principals: [bob]
+      resources: [edge]
+      actions: [payPayment]
+    expected:
+      - principal: bob
+        resource: edge
+        actions:
+          payPayment: EFFECT_DENY

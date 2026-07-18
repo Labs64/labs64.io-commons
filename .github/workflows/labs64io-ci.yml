@@ -42,20 +42,12 @@ jobs:
           pip install -q -e ".[dev]"
           pytest -q
 
-  # Edge + domain policies
-  # validate against ONE shared schema (no-drift, F3), and a cross-tenant
-  # isolation gate proves the tenant guard denies across-tenant access (F4/F8).
-  cedar:
+  # RFC-07 decision-equivalence gate: generate the reference Cerbos policy set
+  # from the SAME x-labs64-auth (F3, no-drift) and run cerbos compile + the
+  # truth-table suite — including the cross-tenant isolation invariant (F4/F8).
+  cerbos:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Cache cedar CLI
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin
-          key: cedar-cli-4.11.2
-      - name: Install cedar CLI
-        run: command -v cedar || cargo install cedar-policy-cli --version 4.11.2 --locked
-      - name: Cedar schema + cross-tenant isolation gate
-        run: ./auth-policy-cedar/validate.sh
+      - name: Cerbos compile + decision-equivalence truth-table gate
+        run: ./auth-policy-cerbos/validate.sh
