@@ -3,7 +3,6 @@ package io.labs64.authcontext.autoconfigure;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnResource;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import java.io.BufferedReader;
@@ -27,7 +26,6 @@ import io.labs64.authcontext.web.AuthContextArgumentResolver;
 import io.labs64.authcontext.web.AuthContextFilter;
 import io.labs64.authcontext.web.AuthContextProperties;
 import io.labs64.authcontext.web.AuthContextWebMvcConfigurer;
-import io.labs64.authcontext.web.AuthPolicyController;
 import io.labs64.authcontext.web.PublicPathMatcher;
 
 @AutoConfiguration
@@ -105,10 +103,4 @@ public class AuthContextAutoConfiguration {
                 requireScopesInterceptor);
     }
 
-    @Bean
-    @ConditionalOnMissingBean
-    @ConditionalOnResource(resources = "classpath:auth-policy.cedar")
-    public AuthPolicyController authPolicyController() {
-        return new AuthPolicyController();
-    }
 }
