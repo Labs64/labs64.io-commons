@@ -1,4 +1,4 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import java.util.List;
 import java.util.Map;
@@ -24,8 +24,8 @@ import jakarta.servlet.http.HttpServletResponse;
 /**
  * The {@code @Authorize} PEP: runs after the coarse
  * {@code @RequireTenant}/{@code @RequireScopes} pre-filters, resolves the
- * domain resource through the module's {@link CedarEntityResolver}, asks the
- * Cedar PDP, publishes the decision to every
+ * domain resource through the module's {@link ResourceResolver}, asks the
+ * external PDP, publishes the decision to every
  * {@link AuthorizationDecisionListener}, and — in ENFORCE mode — blocks with
  * 403 (401 when no {@code AuthContext} is present). SHADOW mode never blocks.
  *
@@ -36,13 +36,13 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthorizeInterceptor.class);
 
-    private final CedarAuthorizationService service;
-    private final List<CedarEntityResolver> resolvers;
+    private final AuthorizationService service;
+    private final List<ResourceResolver> resolvers;
     private final List<AuthorizationDecisionListener> listeners;
     private final ExpressionParser parser = new SpelExpressionParser();
 
-    public AuthorizeInterceptor(final CedarAuthorizationService service,
-            final List<CedarEntityResolver> resolvers,
+    public AuthorizeInterceptor(final AuthorizationService service,
+            final List<ResourceResolver> resolvers,
             final List<AuthorizationDecisionListener> listeners) {
         this.service = service;
         this.resolvers = resolvers;
@@ -65,12 +65,12 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
             // The AuthContextFilter fails closed before us on protected paths;
             // this is defense in depth for misconfigured public paths.
             if (service.isEnforcing()) {
-                logger.warn("cedar-domain outcome=enforced-deny decision=deny mode=enforce "
+                logger.warn("authz-domain outcome=enforced-deny decision=deny mode=enforce "
                         + "action={} reason=no-auth-context requestId=-", annotation.action());
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
                 return false;
             }
-            logger.warn("cedar-domain outcome=shadow-deny decision=deny mode=shadow "
+            logger.warn("authz-domain outcome=shadow-deny decision=deny mode=shadow "
                     + "action={} reason=no-auth-context requestId=-", annotation.action());
             return true;
         }
@@ -90,7 +90,7 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
         // semantics apply (e.g. its NotFoundException → 404, never a 403 that
         // leaks existence) and an erroring request is fail-closed by nature.
         Object resourceRef = evaluateResourceRef(annotation.resource(), request);
-        CedarEntity resource = resolve(annotation.resourceType(), resourceRef, context);
+        ResourceEntity resource = resolve(annotation.resourceType(), resourceRef, context);
         return service.decide(context, annotation.action(), resource);
     }
 
@@ -107,14 +107,14 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
         return parser.parseExpression(expression).getValue(evaluationContext);
     }
 
-    private CedarEntity resolve(final String resourceType, @Nullable final Object resourceRef,
+    private ResourceEntity resolve(final String resourceType, @Nullable final Object resourceRef,
             final AuthContext context) {
-        for (CedarEntityResolver resolver : resolvers) {
+        for (ResourceResolver resolver : resolvers) {
             if (resolver.supports(resourceType)) {
                 return resolver.resolve(resourceType, resourceRef, context);
             }
         }
-        throw new IllegalStateException("no CedarEntityResolver supports resource type " + resourceType);
+        throw new IllegalStateException("no ResourceResolver supports resource type " + resourceType);
     }
 
     private void publish(final AuthorizationDecision decision) {

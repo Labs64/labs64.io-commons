@@ -1,4 +1,4 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

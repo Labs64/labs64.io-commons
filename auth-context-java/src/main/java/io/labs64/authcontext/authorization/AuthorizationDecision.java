@@ -1,20 +1,20 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import java.util.List;
 
 import org.jspecify.annotations.Nullable;
 
 /**
- * One Cedar domain authorization decision — published to every
+ * One domain authorization decision — published to every
  * {@link AuthorizationDecisionListener} for auditability.
  *
- * @param action       Cedar action id (unqualified)
- * @param resourceType Cedar resource type (unqualified)
+ * @param action       action id (unqualified)
+ * @param resourceType resource type (unqualified)
  * @param resourceId   resource entity id ("-" when resolution failed)
  * @param allowed      the decision
  * @param enforced     true when the decision blocked/passed the request
  *                     (ENFORCE), false in SHADOW
- * @param reasons      matched policy ids from Cedar diagnostics
+ * @param reasons      matched policy ids from PDP diagnostics
  * @param error        engine/resolution error, null on a clean decision;
  *                     a non-null error always comes with {@code allowed=false}
  *                     (fail closed)

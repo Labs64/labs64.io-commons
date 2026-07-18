@@ -1,4 +1,4 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -6,17 +6,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Engine-agnostic Cedar entity: what a module's {@link CedarEntityResolver}
+ * Engine-agnostic authorization resource entity: what a module's {@link ResourceResolver}
  * returns for the resource under authorization.
  *
  * <p>Attribute values may be {@link String}, {@link Boolean}, {@link Number}
- * (mapped to Cedar Long), a nested {@code CedarEntity} (mapped to an entity
+ * (mapped to a numeric value), a nested {@code ResourceEntity} (mapped to an entity
  * reference), or a {@code List} of those. Types are unqualified
  * (e.g. {@code Payment}) and namespaced by the engine.
  */
-public record CedarEntity(String type, String id, Map<String, Object> attributes, List<CedarEntity> parents) {
+public record ResourceEntity(String type, String id, Map<String, Object> attributes, List<ResourceEntity> parents) {
 
-    public CedarEntity {
+    public ResourceEntity {
         if (type == null || type.isBlank()) {
             throw new IllegalArgumentException("entity type must not be empty");
         }
@@ -28,8 +28,8 @@ public record CedarEntity(String type, String id, Map<String, Object> attributes
     }
 
     /** Bare entity reference (no attributes/parents), e.g. a tenant. */
-    public static CedarEntity ref(final String type, final String id) {
-        return new CedarEntity(type, id, Map.of(), List.of());
+    public static ResourceEntity ref(final String type, final String id) {
+        return new ResourceEntity(type, id, Map.of(), List.of());
     }
 
     public static Builder builder(final String type, final String id) {
@@ -40,7 +40,7 @@ public record CedarEntity(String type, String id, Map<String, Object> attributes
         private final String type;
         private final String id;
         private final Map<String, Object> attributes = new LinkedHashMap<>();
-        private final List<CedarEntity> parents = new ArrayList<>();
+        private final List<ResourceEntity> parents = new ArrayList<>();
 
         private Builder(final String type, final String id) {
             this.type = type;
@@ -54,13 +54,13 @@ public record CedarEntity(String type, String id, Map<String, Object> attributes
             return this;
         }
 
-        public Builder parent(final CedarEntity parent) {
+        public Builder parent(final ResourceEntity parent) {
             parents.add(parent);
             return this;
         }
 
-        public CedarEntity build() {
-            return new CedarEntity(type, id, attributes, parents);
+        public ResourceEntity build() {
+            return new ResourceEntity(type, id, attributes, parents);
         }
     }
 }

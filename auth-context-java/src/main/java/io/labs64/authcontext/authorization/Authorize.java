@@ -1,4 +1,4 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -7,20 +7,20 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Fine-grained Cedar domain authorization on a handler method.
+ * Fine-grained domain authorization on a handler method (RFC-07).
  *
  * <p>Additive to the coarse {@code @RequireScopes}/{@code @RequireTenant}
- * pre-filters: those stay as fast gates, Cedar is the authoritative
- * resource-level decision. Active only when {@code labs64.auth.cedar.enabled}
- * is set and the optional {@code com.cedarpolicy:cedar-java} dependency is on
- * the classpath; in {@code SHADOW} mode decisions are evaluated, published to
+ * pre-filters: those stay as fast gates, the external PDP is the authoritative
+ * resource-level decision. Active only when {@code labs64.auth.authz.enabled}
+ * is set; the decision is delegated to the central Cerbos PDP. In
+ * {@code SHADOW} mode decisions are evaluated, published to
  * {@link AuthorizationDecisionListener}s and logged, but never block.
  *
  * <pre>{@code
  * @PostMapping("/payments/{paymentId}/pay")
  * @RequireScopes("payment:pay")                                  // fast pre-filter
  * @Authorize(action = "payPayment", resource = "#paymentId",
- *            resourceType = "Payment")                           // Cedar, authoritative
+ *            resourceType = "Payment")                           // PDP, authoritative
  * public ResponseEntity<Payment> payPayment(@PathVariable UUID paymentId) { ... }
  * }</pre>
  */
@@ -29,20 +29,20 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Authorize {
 
-    /** Cedar action id (unqualified; namespaced as {@code Labs64IO::Action::"<action>"}). */
+    /** Authorization action id (unqualified; matches the resource policy's action rule). */
     String action();
 
     /**
      * SpEL expression yielding the resource reference, evaluated against the
      * request's URI template variables (e.g. {@code #paymentId}). Empty means
-     * the {@link CedarEntityResolver} receives a {@code null} reference and
+     * the {@link ResourceResolver} receives a {@code null} reference and
      * builds the resource from the {@code AuthContext} alone.
      */
     String resource() default "";
 
     /**
-     * Cedar resource entity type (unqualified, e.g. {@code Payment}); passed
-     * to the matching {@link CedarEntityResolver}.
+     * Resource entity type (unqualified, e.g. {@code Payment}); passed to the
+     * matching {@link ResourceResolver}.
      */
     String resourceType();
 }

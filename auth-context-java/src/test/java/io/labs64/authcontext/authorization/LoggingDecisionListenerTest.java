@@ -1,4 +1,4 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,7 +25,7 @@ class LoggingDecisionListenerTest {
     @BeforeEach
     void attach() {
         summaryLogger = (Logger) LoggerFactory.getLogger(LoggingDecisionListener.class);
-        detailLogger = (Logger) LoggerFactory.getLogger("io.labs64.authcontext.cedar.detail");
+        detailLogger = (Logger) LoggerFactory.getLogger("io.labs64.authcontext.authorization.detail");
         summaryAppender = new ListAppender<>();
         detailAppender = new ListAppender<>();
         summaryAppender.start();

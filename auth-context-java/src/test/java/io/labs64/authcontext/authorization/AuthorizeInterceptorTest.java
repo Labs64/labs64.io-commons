@@ -1,4 +1,4 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -12,7 +12,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
@@ -27,14 +26,6 @@ import io.labs64.authcontext.core.AuthContextHolder;
 
 class AuthorizeInterceptorTest {
 
-    private static final String POLICIES = """
-            forbid(principal, action, resource is Labs64IO::Payment)
-            unless { principal in resource.tenant };
-
-            permit(principal, action == Labs64IO::Action::"payPayment", resource)
-            when { resource.status == "READY" && context.scopes.contains("payment:pay") };
-            """;
-
     static class PaymentController {
         @Authorize(action = "payPayment", resource = "#paymentId", resourceType = "Payment")
         public void payPayment(UUID paymentId) {
@@ -45,20 +36,48 @@ class AuthorizeInterceptorTest {
     }
 
     /** Fake repository: payment pay_1 lives in t_100 and is READY. */
-    static class PaymentResolver implements CedarEntityResolver {
+    static class PaymentResolver implements ResourceResolver {
         @Override
         public boolean supports(final String resourceType) {
             return "Payment".equals(resourceType);
         }
 
         @Override
-        public CedarEntity resolve(final String resourceType, final Object resourceRef, final AuthContext ctx) {
-            CedarEntity tenant = CedarEntity.ref("Tenant", "t_100");
-            return CedarEntity.builder("Payment", String.valueOf(resourceRef))
-                    .attribute("tenant", tenant)
+        public ResourceEntity resolve(final String resourceType, final Object resourceRef, final AuthContext ctx) {
+            return ResourceEntity.builder("Payment", String.valueOf(resourceRef))
+                    .attribute("tenant", "t_100")
                     .attribute("status", "READY")
-                    .parent(tenant)
                     .build();
+        }
+    }
+
+    /**
+     * Stub PDP standing in for the external {@link AuthorizationService} (the
+     * real Cerbos client is exercised in {@code CerbosAuthorizationServiceTest}).
+     * Mirrors the tenant-guard + scope semantics the interceptor relies on:
+     * allow only when the principal's tenant matches the resource tenant and it
+     * carries the {@code payment:pay} scope.
+     */
+    static class StubAuthorizationService implements AuthorizationService {
+        private final AuthorizationProperties.Mode mode;
+
+        StubAuthorizationService(final AuthorizationProperties.Mode mode) {
+            this.mode = mode;
+        }
+
+        @Override
+        public boolean isEnforcing() {
+            return mode == AuthorizationProperties.Mode.ENFORCE;
+        }
+
+        @Override
+        public AuthorizationDecision decide(final AuthContext ctx, final String action, final ResourceEntity resource) {
+            Object tenant = resource.attributes().get("tenant");
+            boolean sameTenant = tenant != null && tenant.equals(ctx.tenantId());
+            boolean allowed = sameTenant && ctx.hasScope("payment:pay");
+            return new AuthorizationDecision(action, resource.type(), resource.id(),
+                    allowed, isEnforcing(), allowed ? List.of("policy0") : List.of(), null,
+                    ctx.userId(), ctx.tenantId(), ctx.requestId());
         }
     }
 
@@ -69,13 +88,9 @@ class AuthorizeInterceptorTest {
         AuthContextHolder.clear();
     }
 
-    private AuthorizeInterceptor interceptor(final CedarProperties.Mode mode) {
-        CedarProperties properties = new CedarProperties();
-        properties.setEnabled(true);
-        properties.setMode(mode);
-        CedarAuthorizationService service = new CedarAuthorizationService(
-                properties, new ByteArrayResource(POLICIES.getBytes()));
-        return new AuthorizeInterceptor(service, List.of(new PaymentResolver()), List.of(decisions::add));
+    private AuthorizeInterceptor interceptor(final AuthorizationProperties.Mode mode) {
+        return new AuthorizeInterceptor(new StubAuthorizationService(mode),
+                List.of(new PaymentResolver()), List.of(decisions::add));
     }
 
     private MockHttpServletResponse response = new MockHttpServletResponse();
@@ -93,7 +108,7 @@ class AuthorizeInterceptorTest {
     @Test
     void shadowModeNeverBlocksButPublishesDecision() throws Exception {
         AuthContextHolder.set(new AuthContext("mallory", "t_200", Set.of("payment:pay"), "r-1"));
-        boolean proceed = invoke(interceptor(CedarProperties.Mode.SHADOW), "payPayment");
+        boolean proceed = invoke(interceptor(AuthorizationProperties.Mode.SHADOW), "payPayment");
         assertThat(proceed).isTrue(); // cross-tenant would deny — shadow lets it pass
         assertThat(decisions).hasSize(1);
         assertThat(decisions.get(0).allowed()).isFalse();
@@ -103,7 +118,7 @@ class AuthorizeInterceptorTest {
     @Test
     void enforceModeBlocksCrossTenantWith403() throws Exception {
         AuthContextHolder.set(new AuthContext("mallory", "t_200", Set.of("payment:pay"), "r-1"));
-        boolean proceed = invoke(interceptor(CedarProperties.Mode.ENFORCE), "payPayment");
+        boolean proceed = invoke(interceptor(AuthorizationProperties.Mode.ENFORCE), "payPayment");
         assertThat(proceed).isFalse();
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(decisions.get(0).enforced()).isTrue();
@@ -112,7 +127,7 @@ class AuthorizeInterceptorTest {
     @Test
     void enforceModeAllowsSameTenantReadyPayment() throws Exception {
         AuthContextHolder.set(new AuthContext("alice", "t_100", Set.of("payment:pay"), "r-1"));
-        boolean proceed = invoke(interceptor(CedarProperties.Mode.ENFORCE), "payPayment");
+        boolean proceed = invoke(interceptor(AuthorizationProperties.Mode.ENFORCE), "payPayment");
         assertThat(proceed).isTrue();
         assertThat(decisions.get(0).allowed()).isTrue();
         assertThat(decisions.get(0).reasons()).isNotEmpty();
@@ -121,20 +136,20 @@ class AuthorizeInterceptorTest {
     @Test
     void unannotatedMethodIsIgnored() throws Exception {
         AuthContextHolder.set(new AuthContext("alice", "t_100", Set.of(), "r-1"));
-        assertThat(invoke(interceptor(CedarProperties.Mode.ENFORCE), "unannotated")).isTrue();
+        assertThat(invoke(interceptor(AuthorizationProperties.Mode.ENFORCE), "unannotated")).isTrue();
         assertThat(decisions).isEmpty();
     }
 
     @Test
     void missingAuthContextIs401InEnforce() throws Exception {
-        boolean proceed = invoke(interceptor(CedarProperties.Mode.ENFORCE), "payPayment");
+        boolean proceed = invoke(interceptor(AuthorizationProperties.Mode.ENFORCE), "payPayment");
         assertThat(proceed).isFalse();
         assertThat(response.getStatus()).isEqualTo(401);
     }
 
     @Test
     void missingAuthContextPassesInShadow() throws Exception {
-        assertThat(invoke(interceptor(CedarProperties.Mode.SHADOW), "payPayment")).isTrue();
+        assertThat(invoke(interceptor(AuthorizationProperties.Mode.SHADOW), "payPayment")).isTrue();
     }
 
     @Test
@@ -144,7 +159,7 @@ class AuthorizeInterceptorTest {
         appender.start();
         log.addAppender(appender);
         try {
-            boolean proceed = invoke(interceptor(CedarProperties.Mode.ENFORCE), "payPayment");
+            boolean proceed = invoke(interceptor(AuthorizationProperties.Mode.ENFORCE), "payPayment");
             assertThat(proceed).isFalse();
             assertThat(response.getStatus()).isEqualTo(401);
             assertThat(appender.list).anySatisfy(e -> {
@@ -162,23 +177,19 @@ class AuthorizeInterceptorTest {
         // The module's own exceptions (NotFound etc.) must reach its handlers
         // untouched — an erroring request is fail-closed by nature, and a 404
         // must never be converted into an existence-leaking 403.
-        CedarProperties properties = new CedarProperties();
-        properties.setEnabled(true);
-        properties.setMode(CedarProperties.Mode.ENFORCE);
-        CedarAuthorizationService service = new CedarAuthorizationService(
-                properties, new ByteArrayResource(POLICIES.getBytes()));
-        CedarEntityResolver broken = new CedarEntityResolver() {
+        ResourceResolver broken = new ResourceResolver() {
             @Override
             public boolean supports(final String resourceType) {
                 return true;
             }
 
             @Override
-            public CedarEntity resolve(final String type, final Object ref, final AuthContext ctx) {
+            public ResourceEntity resolve(final String type, final Object ref, final AuthContext ctx) {
                 throw new IllegalStateException("payment not found");
             }
         };
-        AuthorizeInterceptor interceptor = new AuthorizeInterceptor(service, List.of(broken),
+        AuthorizeInterceptor interceptor = new AuthorizeInterceptor(
+                new StubAuthorizationService(AuthorizationProperties.Mode.ENFORCE), List.of(broken),
                 List.of(decisions::add));
 
         AuthContextHolder.set(new AuthContext("alice", "t_100", Set.of("payment:pay"), "r-1"));

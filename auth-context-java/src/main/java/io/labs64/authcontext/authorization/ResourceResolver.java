@@ -1,11 +1,11 @@
-package io.labs64.authcontext.cedar;
+package io.labs64.authcontext.authorization;
 
 import org.jspecify.annotations.Nullable;
 
 import io.labs64.authcontext.core.AuthContext;
 
 /**
- * Module SPI: turns an {@code @Authorize} resource reference into the Cedar
+ * Module SPI: turns an {@code @Authorize} resource reference into the authorization
  * resource entity, supplying the domain attributes (tenant, status, owner, …)
  * the policies decide on. The module owns the resource context
  * Principle 3.
@@ -16,15 +16,15 @@ import io.labs64.authcontext.core.AuthContext;
  * with the module's normal error semantics — preferred over a 403 that would
  * leak existence.
  */
-public interface CedarEntityResolver {
+public interface ResourceResolver {
 
     boolean supports(String resourceType);
 
     /**
-     * @param resourceType unqualified Cedar type from the annotation (e.g. {@code Payment})
+     * @param resourceType unqualified resource type from the annotation (e.g. {@code Payment})
      * @param resourceRef  SpEL result (e.g. a path-variable value), or null when
      *                     the annotation declares no resource expression
      * @param context      the trusted per-request identity
      */
-    CedarEntity resolve(String resourceType, @Nullable Object resourceRef, AuthContext context);
+    ResourceEntity resolve(String resourceType, @Nullable Object resourceRef, AuthContext context);
 }
