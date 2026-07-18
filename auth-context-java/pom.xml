@@ -64,6 +64,22 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- Cerbos PDP client (RFC-07): the @Authorize domain PEP delegates decisions
+             to the central Cerbos PDP over gRPC. CerbosAutoConfiguration is
+             @ConditionalOnProperty(labs64.auth.authz.enabled)-guarded. -->
+        <dependency>
+            <groupId>dev.cerbos</groupId>
+            <artifactId>cerbos-sdk-java</artifactId>
+            <version>0.18.0</version>
+        </dependency>
+        <!-- The SDK declares protobuf-java at runtime scope, but its PlanResources
+             filter API exposes protobuf types (Operand oneof) that CerbosPlanMapper
+             walks at compile time. Pinned to the SDK's transitive version. -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>4.34.2</version>
+        </dependency>
         <!-- Test support (@WithAuthContext) ships in the main jar; JUnit stays optional for consumers -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
