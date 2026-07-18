@@ -12,15 +12,34 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.labs64.authcontext.openapi.OpenApiAuthPreprocessor;
 
 class OpenApiAuthPreprocessorTest {
 
     @TempDir
     Path tempDir;
+
+    /**
+     * Three-pattern fixture: one {@code public} op, one
+     * {@code tenant + scopes + resource} op, one {@code scopes}-only op — the
+     * shapes the Cerbos generator must translate.
+     */
+    private Map<String, Object> openApiFixture() {
+        return map("paths", map(
+                "/payment-definitions", map(
+                        "get", map("operationId", "listPaymentDefinitions",
+                                "x-labs64-auth", map("public", true))),
+                "/payments/{id}/pay", map(
+                        "post", map("operationId", "payPayment",
+                                "x-labs64-auth", map(
+                                        "tenant", true,
+                                        "scopes", List.of("payment:pay"),
+                                        "resource", "Payment"))),
+                "/events", map(
+                        "post", map("operationId", "publishEvent",
+                                "x-labs64-auth", map(
+                                        "scopes", List.of("audit-event:write"))))));
+    }
 
     @Test
     @SuppressWarnings("unchecked")
@@ -60,134 +79,95 @@ class OpenApiAuthPreprocessorTest {
     }
 
     @Test
-    void emitsEdgeCedarPoliciesPerOperation() {
-        Map<String, Object> openApi = map("paths", map(
-                "/payments", map(
-                        "get", map(
-                                "operationId", "listPayments",
-                                "x-labs64-auth", map(
-                                        "tenant", true,
-                                        "scopes", List.of("payment:read", "payment:admin")))),
-                "/health", map(
-                        "get", map(
-                                "operationId", "health",
-                                "x-labs64-auth", map("public", true)))));
-
+    void cerbosResourceKindNormalisesModuleName() {
         OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
-        String cedar = preprocessor.cedarPolicies("payment-gateway", preprocessor.enrich(openApi));
-
-        assertThat(cedar).contains("""
-                @id("payment-gateway::listPayments")
-                @path("/payments")
-                @method("GET")
-                @public("false")
-                @tenantRequired("true")
-                @scopes("payment:read,payment:admin")
-                permit(
-                  principal,
-                  action == Labs64IO::Action::"invoke",
-                  resource == Labs64IO::ApiOperation::"payment-gateway::listPayments"
-                ) when { (context has tenant || principal is Labs64IO::Service) && (context.scopes.contains("payment:read") || context.scopes.contains("payment:admin")) };
-                """);
-        assertThat(cedar).contains("""
-                @id("payment-gateway::health")
-                @path("/health")
-                @method("GET")
-                @public("true")
-                @tenantRequired("false")
-                @scopes("")
-                permit(
-                  principal,
-                  action == Labs64IO::Action::"invoke",
-                  resource == Labs64IO::ApiOperation::"payment-gateway::health"
-                );
-                """);
+        assertThat(preprocessor.cerbosResourceKind("payment-gateway")).isEqualTo("payment_gateway_api");
+        assertThat(preprocessor.cerbosResourceKind("auditflow")).isEqualTo("auditflow_api");
     }
 
     @Test
-    void routingAnnotationsPreservePathTemplateBraces() {
-        // Path-templated routes are the routing-table's hard case: the
-        // traefik-authproxy's cedarpy-based parser reads @path back out of the
-        // generated policy JSON verbatim, so the {param} braces must not get
-        // mangled by Cedar string-literal escaping.
-        Map<String, Object> openApi = map("paths", map(
-                "/payments/{id}", map(
-                        "get", map(
-                                "operationId", "getPayment",
-                                "x-labs64-auth", map(
-                                        "tenant", true,
-                                        "scopes", List.of("payment:write"))))));
-
+    void cerbosEdgePolicyTranslatesThreePatterns() throws IOException {
         OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
-        String cedar = preprocessor.cedarPolicies("payment-gateway", preprocessor.enrich(openApi));
+        Map<String, Object> policy = preprocessor.enrich(openApiFixture());
+        Map<String, String> files = preprocessor.cerbosPolicies("payment-gateway", policy);
+        String edge = files.get("payment_gateway_api.yaml");
 
-        assertThat(cedar).contains("@path(\"/payments/{id}\")");
-        assertThat(cedar).contains("@method(\"GET\")");
-        assertThat(cedar).contains("@public(\"false\")");
-        assertThat(cedar).contains("@tenantRequired(\"true\")");
-        assertThat(cedar).contains("@scopes(\"payment:write\")");
+        assertThat(edge).contains("resource: payment_gateway_api");
+        // public op: an ALLOW action listed by operationId
+        assertThat(edge).contains("- listPaymentDefinitions");
+        // scope OR-check + tenant/service exemption for the protected op (fragments
+        // asserted without embedded quotes so they survive YAML scalar escaping)
+        assertThat(edge).contains("request.principal.attr.scopes.exists(s, s ==");
+        assertThat(edge).contains("has(request.principal.attr.tenant)");
+        assertThat(edge).contains("in request.principal.roles)");
+        assertThat(edge).contains("cerbos:///principal.json");
     }
 
     @Test
-    void emitsDomainCedarOnlyForOperationsDeclaringAResource() {
-        Map<String, Object> openApi = map("paths", map(
-                "/payments/{id}/pay", map(
-                        "post", map(
-                                "operationId", "payPayment",
-                                "x-labs64-auth", map(
-                                        "tenant", true,
-                                        "scopes", List.of("payment:pay"),
-                                        "resource", "Payment"))),
-                "/providers", map(
-                        "get", map(
-                                "operationId", "listPaymentProviders",
-                                "x-labs64-auth", map(
-                                        "tenant", true,
-                                        "scopes", List.of("payment-provider:read"))))));
-
+    void cerbosDomainPolicyCarriesTenantGuardDeny() throws IOException {
         OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
-        String cedar = preprocessor.cedarDomainPolicies("payment-gateway", preprocessor.enrich(openApi));
+        Map<String, Object> policy = preprocessor.enrich(openApiFixture());
+        Map<String, String> files = preprocessor.cerbosPolicies("payment-gateway", policy);
+        String domain = files.get("payment-gateway_Payment.yaml");
 
-        // domain permit keyed on the operationId action against the typed resource
-        assertThat(cedar).contains("""
-                @id("payment-gateway::payPayment::domain")
-                permit(
-                  principal,
-                  action == Labs64IO::Action::"payPayment",
-                  resource
-                ) when { (context has tenant || principal is Labs64IO::Service) && (context.scopes.contains("payment:pay")) };
-                """);
-        // one structural tenant guard for the resource type
-        assertThat(cedar).contains("""
-                @id("payment-gateway::tenant-guard::Payment")
-                forbid(
-                  principal,
-                  action,
-                  resource is Labs64IO::Payment
-                ) when { resource has tenant && !(principal in resource.tenant) };
-                """);
-        // operation without a resource declaration gets NO domain policy
-        assertThat(cedar).doesNotContain("listPaymentProviders");
+        assertThat(domain).contains("resource: Payment");
+        assertThat(domain).contains("EFFECT_DENY");
+        assertThat(domain).contains(
+                "has(request.resource.attr.tenant) && (!has(request.principal.attr.tenant) "
+                        + "|| request.resource.attr.tenant != request.principal.attr.tenant)");
+        assertThat(domain).contains("cerbos:///principal.json");
+        // op without a resource declaration gets no domain policy
+        assertThat(files).doesNotContainKey("payment-gateway_.yaml");
     }
 
     @Test
-    void writesCedarOutputWhenRequested() throws IOException {
+    void cerbosSchemasCoverPrincipalAndEachResourceType() throws IOException {
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        Map<String, String> schemas = preprocessor.cerbosSchemas(preprocessor.enrich(openApiFixture()));
+        assertThat(schemas).containsKey("principal.json");
+        assertThat(schemas).containsKey("Payment.json");
+        assertThat(schemas.get("principal.json")).contains("scopes").contains("tenant");
+    }
+
+    @Test
+    void routesManifestListsEveryOperationWithBasePath() throws IOException {
+        OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
+        Map<String, Object> policy = preprocessor.enrich(openApiFixture());
+        String routes = preprocessor.routesManifest("payment-gateway", "/payment-gateway/api/v1", policy);
+        assertThat(routes).contains("module: payment-gateway");
+        assertThat(routes).contains("basePath: /payment-gateway/api/v1");
+        assertThat(routes).contains("operationId: payPayment");
+        assertThat(routes).contains("operationId: listPaymentDefinitions");
+    }
+
+    @Test
+    void writesCerbosOutputAndRoutesWhenRequested() throws IOException {
         Path input = tempDir.resolve("openapi.yaml");
         Files.writeString(input, """
                 openapi: 3.0.3
                 paths:
-                  /health:
-                    get:
-                      operationId: health
+                  /payments/{id}/pay:
+                    post:
+                      operationId: payPayment
                       x-labs64-auth:
-                        public: true
+                        tenant: true
+                        scopes:
+                          - payment:pay
+                        resource: Payment
                 """);
-        Path cedarOutput = tempDir.resolve("module.cedar");
+        Path cerbosDir = tempDir.resolve("cerbos");
+        Path routes = tempDir.resolve("payment-gateway.routes.yaml");
 
         new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"),
-                cedarOutput, "auditflow");
+                cerbosDir, "payment-gateway", routes, "/payment-gateway/api/v1", null);
 
-        assertThat(Files.readString(cedarOutput)).contains("Labs64IO::ApiOperation::\"auditflow::health\"");
+        assertThat(Files.readString(cerbosDir.resolve("policies/payment_gateway_api.yaml")))
+                .contains("resource: payment_gateway_api");
+        assertThat(Files.readString(cerbosDir.resolve("policies/payment-gateway_Payment.yaml")))
+                .contains("resource: Payment");
+        assertThat(Files.readString(cerbosDir.resolve("policies/_schemas/principal.json")))
+                .contains("scopes");
+        assertThat(Files.readString(routes)).contains("operationId: payPayment");
     }
 
     @Test
@@ -235,7 +215,7 @@ class OpenApiAuthPreprocessorTest {
         Path publicPathsOutput = tempDir.resolve("auth-public-paths");
 
         new OpenApiAuthPreprocessor().process(input, tempDir.resolve("out.yaml"),
-                null, null, null, publicPathsOutput);
+                null, null, null, null, publicPathsOutput);
 
         String content = Files.readString(publicPathsOutput);
         assertThat(content).contains("GET /payment-definitions");

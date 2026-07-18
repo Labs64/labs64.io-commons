@@ -32,6 +32,12 @@ public class OpenApiAuthPreprocessor {
 
     private final ObjectMapper yamlMapper;
     private final ObjectMapper jsonMapper;
+    /** Clean, quote-minimised YAML for the Cerbos policies and routes manifest. */
+    private final ObjectMapper cerbosYamlMapper = new ObjectMapper(YAMLFactory.builder()
+            .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER)
+            .enable(YAMLGenerator.Feature.MINIMIZE_QUOTES)
+            .disable(YAMLGenerator.Feature.SPLIT_LINES)
+            .build());
 
     public OpenApiAuthPreprocessor() {
         this(new ObjectMapper(YAMLFactory.builder()
@@ -45,47 +51,44 @@ public class OpenApiAuthPreprocessor {
     }
 
     public void process(final Path input, final Path openApiOutput) throws IOException {
-        process(input, openApiOutput, null, null, null);
-    }
-
-    public void process(final Path input, final Path openApiOutput, final Path cedarOutput,
-            final String module) throws IOException {
-        process(input, openApiOutput, cedarOutput, module, null);
+        process(input, openApiOutput, null, null, null, null, null);
     }
 
     /**
-     * Full pipeline including the generated Cedar policy sets.
-     * OpenAPI stays the single source of truth for enforcement: the same
-     * {@code x-labs64-auth} produces the edge (Tier-1) and domain (Tier-2)
-     * policies. {@code cedarOutput}/{@code module} may be null to skip Cedar;
-     * {@code cedarDomainOutput} may be null to skip only the domain tier.
+     * Full pipeline (RFC-07). Writes the enriched OpenAPI and, when the
+     * corresponding output is given, the Cerbos policy set
+     * ({@code policies/*.yaml} resource policies plus
+     * {@code policies/_schemas/*.json} schemas), the routes manifest, and the
+     * flat public-path list. OpenAPI stays the single source of truth for
+     * enforcement — the same {@code x-labs64-auth} feeds every output.
+     *
+     * @param cerbosOutputDir   base dir for {@code policies/} + {@code policies/_schemas/}; null to skip
+     * @param module            module name; required when {@code cerbosOutputDir} or {@code routesOutput} is set
+     * @param routesOutput      routes-manifest file; null to skip
+     * @param basePath          gateway base path prefixed onto the routes manifest; may be null
+     * @param publicPathsOutput flat public-path list for {@code AuthContextFilter}; null to skip
      */
-    public void process(final Path input, final Path openApiOutput, final Path cedarOutput,
-            final String module, final Path cedarDomainOutput) throws IOException {
-        process(input, openApiOutput, cedarOutput, module, cedarDomainOutput, null);
-    }
-
-    /**
-     * Full pipeline, additionally emitting the flat public-path list consumed by
-     * the backend {@code AuthContextFilter}. {@code publicPathsOutput} may be
-     * null to skip it; see {@link #process(Path, Path, Path, Path, String, Path)}
-     * for the other outputs.
-     */
-    public void process(final Path input, final Path openApiOutput, final Path cedarOutput,
-            final String module, final Path cedarDomainOutput, final Path publicPathsOutput) throws IOException {
+    public void process(final Path input, final Path openApiOutput, final Path cerbosOutputDir,
+            final String module, final Path routesOutput, final String basePath,
+            final Path publicPathsOutput) throws IOException {
         Map<String, Object> openApi = readYaml(input);
         Map<String, Object> policy = enrich(openApi);
         writeYaml(openApiOutput, openApi);
-        if (cedarOutput != null || cedarDomainOutput != null) {
-            if (module == null || module.isBlank()) {
-                throw new IllegalArgumentException("module is required when a cedar output is requested");
+        if ((cerbosOutputDir != null || routesOutput != null) && (module == null || module.isBlank())) {
+            throw new IllegalArgumentException("module is required when a cerbos or routes output is requested");
+        }
+        if (cerbosOutputDir != null) {
+            Path policiesDir = cerbosOutputDir.resolve("policies");
+            for (Map.Entry<String, String> file : cerbosPolicies(module, policy).entrySet()) {
+                writeText(policiesDir.resolve(file.getKey()), file.getValue());
+            }
+            Path schemasDir = policiesDir.resolve("_schemas");
+            for (Map.Entry<String, String> file : cerbosSchemas(policy).entrySet()) {
+                writeText(schemasDir.resolve(file.getKey()), file.getValue());
             }
         }
-        if (cedarOutput != null) {
-            writeText(cedarOutput, cedarPolicies(module, policy));
-        }
-        if (cedarDomainOutput != null) {
-            writeText(cedarDomainOutput, cedarDomainPolicies(module, policy));
+        if (routesOutput != null) {
+            writeText(routesOutput, routesManifest(module, basePath, policy));
         }
         if (publicPathsOutput != null) {
             writeText(publicPathsOutput, publicPathsDocument(policy));
@@ -120,151 +123,146 @@ public class OpenApiAuthPreprocessor {
         return doc.toString();
     }
 
-    /**
-     * Renders the enriched policy document as per-operation edge Cedar policies
-     * against the shared schema's {@code ApiOperation}/{@code invoke} model.
-     * The three x-labs64-auth patterns translate 1:1: public →
-     * unconditional permit; tenant → {@code context has tenant}; scopes →
-     * any-overlap ({@code ||}) on {@code context.scopes}, matching the
-     * authproxy's OR-scope semantics.
-     *
-     * <p>Each permit also carries {@code @path}/{@code @method}/{@code @public}/
-     * {@code @tenantRequired}/{@code @scopes} annotations — the traefik-authproxy's live-discovery path
-     * derives its OpenAPI-template routing table directly from these instead of
-     * fetching a separate {@code auth-policy.json}, so this generated file is
-     * now the single source for both routing and the authorization decision.
-     */
-    @SuppressWarnings("unchecked")
-    public String cedarPolicies(final String module, final Map<String, Object> policy) {
-        StringBuilder cedar = new StringBuilder();
-        cedar.append("// GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
-        cedar.append("// Tier 1 edge policies for module \"").append(module).append("\".\n");
-        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
-            String operationId = route.get("operationId") instanceof String id && !id.isBlank() ? id
-                    : route.get("method") + ":" + route.get("path");
-            String entityId = cedarString(module + "::" + operationId);
-            cedar.append('\n');
-            cedar.append("@id(").append(entityId).append(")\n");
-            cedar.append(routingAnnotations(route));
-            cedar.append("permit(\n");
-            cedar.append("  principal,\n");
-            cedar.append("  action == Labs64IO::Action::\"invoke\",\n");
-            cedar.append("  resource == Labs64IO::ApiOperation::").append(entityId).append('\n');
-            cedar.append(')');
-            String condition = cedarCondition(route);
-            if (!condition.isEmpty()) {
-                cedar.append(" when { ").append(condition).append(" }");
-            }
-            cedar.append(";\n");
-        }
-        return cedar.toString();
+    /** Edge resource kind for a module: {@code payment-gateway} -> {@code payment_gateway_api}. */
+    public String cerbosResourceKind(final String module) {
+        return module.replace('-', '_') + "_api";
     }
 
-    /**
-     * Routing metadata for one route, carried as Cedar annotations so the edge
-     * policy set doubles as the routing table. Booleans
-     * are rendered as the literal strings {@code "true"}/{@code "false"} —
-     * Cedar annotation values are always strings — and scopes are a single
-     * comma-joined string (scope tokens never contain commas).
-     */
+    /** CEL condition mirroring the Cedar semantics 1:1 (empty for public ops). */
     @SuppressWarnings("unchecked")
-    private String routingAnnotations(final Map<String, Object> route) {
-        List<String> scopes = (List<String>) route.get("scopes");
-        String scopesCsv = scopes == null ? "" : String.join(",", scopes);
-        StringBuilder ann = new StringBuilder();
-        ann.append("@path(").append(cedarString(String.valueOf(route.get("path")))).append(")\n");
-        ann.append("@method(").append(cedarString(String.valueOf(route.get("method")))).append(")\n");
-        ann.append("@public(").append(cedarString(String.valueOf(Boolean.TRUE.equals(route.get("public")))))
-                .append(")\n");
-        ann.append("@tenantRequired(")
-                .append(cedarString(String.valueOf(Boolean.TRUE.equals(route.get("tenantRequired")))))
-                .append(")\n");
-        ann.append("@scopes(").append(cedarString(scopesCsv)).append(")\n");
-        return ann.toString();
-    }
-
-    /**
-     * Renders the enriched policy document as per-operation Tier-2 DOMAIN Cedar
-     * policies — the module {@code @Authorize} PEP's policy set,
-     * generated from the SAME {@code x-labs64-auth} as the edge tier so OpenAPI
-     * stays the single source of truth.
-     *
-     * <p>For every operation that declares {@code x-labs64-auth.resource} (the
-     * domain resource type), one {@code permit} keyed on the operationId action
-     * against that resource, conditioned exactly like the edge tier
-     * (tenant/scopes). Per distinct resource type, one structural tenant guard
-     * {@code forbid(..., resource is <Type>) when { resource has tenant &&
-     * !(principal in resource.tenant) }} — the cross-tenant isolation invariant
-     * (F4/F8), kept in Cedar until Postgres RLS lands. Fine-grained
-     * resource-attribute rules (workflow status, ownership) are intentionally
-     * NOT expressible from OpenAPI and stay in the service layer.
-     */
-    @SuppressWarnings("unchecked")
-    public String cedarDomainPolicies(final String module, final Map<String, Object> policy) {
-        StringBuilder cedar = new StringBuilder();
-        cedar.append("// GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
-        cedar.append("// Tier 2 domain policies for module \"").append(module).append("\".\n");
-
-        List<String> resourceTypes = new ArrayList<>();
-        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
-            Object resourceType = route.get("resource");
-            if (!(resourceType instanceof String type) || type.isBlank()) {
-                continue;
-            }
-            if (!resourceTypes.contains(type)) {
-                resourceTypes.add(type);
-            }
-            String operationId = route.get("operationId") instanceof String id && !id.isBlank() ? id
-                    : String.valueOf(route.get("method")) + ":" + route.get("path");
-            cedar.append('\n');
-            cedar.append("@id(").append(cedarString(module + "::" + operationId + "::domain")).append(")\n");
-            cedar.append("permit(\n");
-            cedar.append("  principal,\n");
-            cedar.append("  action == Labs64IO::Action::").append(cedarString(operationId)).append(",\n");
-            cedar.append("  resource\n");
-            cedar.append(')');
-            String condition = cedarCondition(route);
-            if (!condition.isEmpty()) {
-                cedar.append(" when { ").append(condition).append(" }");
-            }
-            cedar.append(";\n");
-        }
-
-        // One structural tenant guard per resource type (forbid overrides permit).
-        for (String type : resourceTypes) {
-            cedar.append('\n');
-            cedar.append("@id(").append(cedarString(module + "::tenant-guard::" + type)).append(")\n");
-            cedar.append("forbid(\n");
-            cedar.append("  principal,\n");
-            cedar.append("  action,\n");
-            cedar.append("  resource is Labs64IO::").append(type).append('\n');
-            cedar.append(") when { resource has tenant && !(principal in resource.tenant) };\n");
-        }
-        return cedar.toString();
-    }
-
-    @SuppressWarnings("unchecked")
-    private String cedarCondition(final Map<String, Object> route) {
+    private String celCondition(final Map<String, Object> route) {
         if (Boolean.TRUE.equals(route.get("public"))) {
             return "";
         }
         List<String> conditions = new ArrayList<>();
         if (Boolean.TRUE.equals(route.get("tenantRequired"))) {
-            conditions.add("(context has tenant || principal is Labs64IO::Service)");
+            conditions.add("(has(request.principal.attr.tenant) || (\"service\" in request.principal.roles))");
         }
         List<String> scopes = (List<String>) route.get("scopes");
         if (scopes != null && !scopes.isEmpty()) {
             List<String> checks = new ArrayList<>();
             for (String scope : scopes) {
-                checks.add("context.scopes.contains(" + cedarString(scope) + ")");
+                checks.add("s == \"" + scope.replace("\\", "\\\\").replace("\"", "\\\"") + "\"");
             }
-            conditions.add("(" + String.join(" || ", checks) + ")");
+            conditions.add("request.principal.attr.scopes.exists(s, " + String.join(" || ", checks) + ")");
         }
         return String.join(" && ", conditions);
     }
 
-    private String cedarString(final String value) {
-        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    private Map<String, Object> cerbosRule(final List<String> actions, final String effect, final String condition) {
+        Map<String, Object> rule = new LinkedHashMap<>();
+        rule.put("actions", actions);
+        rule.put("effect", effect);
+        rule.put("roles", List.of("*"));
+        if (!condition.isEmpty()) {
+            rule.put("condition", Map.of("match", Map.of("expr", condition)));
+        }
+        return rule;
+    }
+
+    private String cerbosPolicyYaml(final String resourceKind, final List<Map<String, Object>> rules,
+            final String resourceSchema) throws IOException {
+        Map<String, Object> rp = new LinkedHashMap<>();
+        rp.put("version", "default");
+        rp.put("resource", resourceKind);
+        Map<String, Object> schemas = new LinkedHashMap<>();
+        schemas.put("principalSchema", Map.of("ref", "cerbos:///principal.json"));
+        if (resourceSchema != null) {
+            schemas.put("resourceSchema", Map.of("ref", "cerbos:///" + resourceSchema));
+        }
+        rp.put("schemas", schemas);
+        rp.put("rules", rules);
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("apiVersion", "api.cerbos.dev/v1");
+        doc.put("resourcePolicy", rp);
+        return "# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n"
+                + cerbosYamlMapper.writeValueAsString(doc);
+    }
+
+    /**
+     * Translates the enriched policy document into Cerbos resource policies —
+     * the RFC-07 replacement for the two Cedar tiers, from the SAME
+     * {@code x-labs64-auth} so OpenAPI stays the single source of truth.
+     *
+     * <p>Emits one <b>edge</b> resource policy per module (kind
+     * {@link #cerbosResourceKind}, one ALLOW rule per operationId, the three
+     * {@code x-labs64-auth} patterns translated to CEL 1:1: public → no
+     * condition; tenant → {@code has(principal.attr.tenant) || service role};
+     * scopes → OR-overlap on {@code principal.attr.scopes}). Additionally, for
+     * every operation declaring {@code x-labs64-auth.resource}, one <b>domain</b>
+     * resource policy per type carrying the same ALLOW rules plus a structural
+     * tenant-guard DENY (the cross-tenant isolation invariant). Returns a
+     * filename → YAML map: {@code <kind>.yaml} and {@code <module>_<Type>.yaml}.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, String> cerbosPolicies(final String module, final Map<String, Object> policy)
+            throws IOException {
+        Map<String, String> files = new LinkedHashMap<>();
+        List<Map<String, Object>> edgeRules = new ArrayList<>();
+        Map<String, List<Map<String, Object>>> domainRules = new LinkedHashMap<>();
+        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
+            String operationId = route.get("operationId") instanceof String id && !id.isBlank() ? id
+                    : route.get("method") + ":" + route.get("path");
+            edgeRules.add(cerbosRule(List.of(operationId), "EFFECT_ALLOW", celCondition(route)));
+            if (route.get("resource") instanceof String type && !type.isBlank()) {
+                domainRules.computeIfAbsent(type, t -> new ArrayList<>())
+                        .add(cerbosRule(List.of(operationId), "EFFECT_ALLOW", celCondition(route)));
+            }
+        }
+        files.put(cerbosResourceKind(module) + ".yaml",
+                cerbosPolicyYaml(cerbosResourceKind(module), edgeRules, null));
+        for (Map.Entry<String, List<Map<String, Object>>> e : domainRules.entrySet()) {
+            List<Map<String, Object>> rules = new ArrayList<>(e.getValue());
+            rules.add(cerbosRule(List.of("*"), "EFFECT_DENY",
+                    "has(request.resource.attr.tenant) && (!has(request.principal.attr.tenant) "
+                    + "|| request.resource.attr.tenant != request.principal.attr.tenant)"));
+            files.put(module + "_" + e.getKey() + ".yaml",
+                    cerbosPolicyYaml(e.getKey(), rules, e.getKey() + ".json"));
+        }
+        return files;
+    }
+
+    /**
+     * JSON schemas for the Cerbos {@code schema.enforcement: reject} mode: a
+     * permissive {@code principal.json} (scopes/tenant attributes) plus one
+     * {@code <Type>.json} per declared domain resource type (tenant attribute).
+     * Filename → JSON body.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, String> cerbosSchemas(final Map<String, Object> policy) throws IOException {
+        Map<String, String> files = new LinkedHashMap<>();
+        files.put("principal.json", jsonMapper.writeValueAsString(Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "scopes", Map.of("type", "array", "items", Map.of("type", "string")),
+                        "tenant", Map.of("type", "string")),
+                "additionalProperties", true)));
+        for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
+            if (route.get("resource") instanceof String type && !type.isBlank()) {
+                files.putIfAbsent(type + ".json", jsonMapper.writeValueAsString(Map.of(
+                        "type", "object",
+                        "properties", Map.of("tenant", Map.of("type", "string")),
+                        "additionalProperties", true)));
+            }
+        }
+        return files;
+    }
+
+    /**
+     * The routes manifest the traefik-authproxy loads to map incoming requests
+     * to (module, operationId, edge-resource-kind). Carries the full enriched
+     * route list plus the module and its gateway {@code basePath} (prefixed onto
+     * each route path by the loader).
+     */
+    public String routesManifest(final String module, final String basePath, final Map<String, Object> policy)
+            throws IOException {
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("version", 1);
+        doc.put("module", module);
+        doc.put("basePath", basePath == null ? "" : basePath);
+        doc.put("routes", policy.get("routes"));
+        return "# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n"
+                + cerbosYamlMapper.writeValueAsString(doc);
     }
 
     public Map<String, Object> enrich(final Map<String, Object> openApi) {

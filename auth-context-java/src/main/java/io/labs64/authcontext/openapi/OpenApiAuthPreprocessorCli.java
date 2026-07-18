@@ -16,17 +16,18 @@ public final class OpenApiAuthPreprocessorCli {
         Map<String, String> options = parseArgs(args);
         Path input = requiredPath(options, "--input");
         Path openApiOutput = requiredPath(options, "--openapi-output");
-        String cedarOutput = options.get("--cedar-output");
-        String cedarDomainOutput = options.get("--cedar-domain-output");
+        String cerbosOutput = options.get("--cerbos-output");
+        String routesOutput = options.get("--routes-output");
+        String basePath = options.get("--base-path");
         String publicPathsOutput = options.get("--public-paths-output");
         String module = options.get("--module");
-        if ((cedarOutput != null || cedarDomainOutput != null) && (module == null || module.isBlank())) {
+        if ((cerbosOutput != null || routesOutput != null) && (module == null || module.isBlank())) {
             throw usage();
         }
 
         new OpenApiAuthPreprocessor().process(input, openApiOutput,
-                cedarOutput == null ? null : Path.of(cedarOutput), module,
-                cedarDomainOutput == null ? null : Path.of(cedarDomainOutput),
+                cerbosOutput == null ? null : Path.of(cerbosOutput), module,
+                routesOutput == null ? null : Path.of(routesOutput), basePath,
                 publicPathsOutput == null ? null : Path.of(publicPathsOutput));
     }
 
@@ -56,8 +57,8 @@ public final class OpenApiAuthPreprocessorCli {
     private static IllegalArgumentException usage() {
         return new IllegalArgumentException("Usage: OpenApiAuthPreprocessorCli --input <openapi.yaml> "
                 + "--openapi-output <generated-openapi.yaml> "
-                + "[--cedar-output <edge.cedar>] [--cedar-domain-output <domain.cedar>] "
+                + "[--cerbos-output <dir>] [--routes-output <routes.yaml>] [--base-path <prefix>] "
                 + "[--public-paths-output <auth-public-paths>] "
-                + "[--module <name>] (module required when either cedar output is given)");
+                + "[--module <name>] (module required when --cerbos-output or --routes-output is given)");
     }
 }
