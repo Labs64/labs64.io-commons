@@ -51,7 +51,8 @@ class OpenApiAuthPreprocessorTest {
                                 "x-operation-extra-annotation", "@org.example.Existing",
                                 "x-labs64-auth", map(
                                         "tenant", true,
-                                        "scopes", List.of("payment:read"))),
+                                        "scopes", List.of("payment:read"),
+                                        "resource", "Payment")),
                         "post", map("operationId", "createPayment",
                                 "x-labs64-auth", map("public", true))),
                 "/health", map(
@@ -70,7 +71,8 @@ class OpenApiAuthPreprocessorTest {
                 .containsExactly(
                         "@org.example.Existing",
                         "@io.labs64.authcontext.authorization.RequireTenant",
-                        "@io.labs64.authcontext.authorization.RequireScopes({\"payment:read\"})");
+                        "@io.labs64.authcontext.authorization.RequireScopes({\"payment:read\"})",
+                        "@io.labs64.authcontext.authorization.Authorize(action = \"listPayments\", resourceType = \"Payment\")");
         assertThat((List<String>) createPayment.get("x-operation-extra-annotation"))
                 .containsExactly("@io.labs64.authcontext.authorization.PublicEndpoint");
         assertThat((List<Map<String, Object>>) policy.get("routes"))

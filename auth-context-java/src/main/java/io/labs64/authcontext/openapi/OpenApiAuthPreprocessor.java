@@ -296,7 +296,7 @@ public class OpenApiAuthPreprocessor {
                 AuthPolicy auth = AuthPolicy.from(operation.getOrDefault(AUTH_EXTENSION, pathAuth.raw()), true);
 
                 List<String> extraAnnotations = extraAnnotations(operation.get(EXTRA_ANNOTATION_EXTENSION));
-                extraAnnotations.addAll(annotations(auth));
+                extraAnnotations.addAll(annotations(auth, operation.get("operationId").toString()));
                 operation.put(EXTRA_ANNOTATION_EXTENSION, extraAnnotations);
                 routes.add(route(path, method, operation, auth));
             }
@@ -308,7 +308,7 @@ public class OpenApiAuthPreprocessor {
         return policy;
     }
 
-    private List<String> annotations(final AuthPolicy auth) {
+    private List<String> annotations(final AuthPolicy auth, final String operationId) {
         List<String> annotations = new ArrayList<>();
         if (auth.isPublic()) {
             annotations.add(PUBLIC_ENDPOINT);
@@ -319,6 +319,10 @@ public class OpenApiAuthPreprocessor {
         }
         if (!auth.scopes().isEmpty()) {
             annotations.add(REQUIRE_SCOPES + "({" + quotedCsv(auth.scopes()) + "})");
+        }
+        if (auth.resourceType() != null) {
+            annotations.add("@io.labs64.authcontext.authorization.Authorize(action = \"" + operationId 
+                    + "\", resourceType = \"" + auth.resourceType() + "\")");
         }
         return annotations;
     }
