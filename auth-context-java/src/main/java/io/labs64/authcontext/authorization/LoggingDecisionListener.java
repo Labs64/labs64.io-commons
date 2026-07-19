@@ -3,6 +3,8 @@ package io.labs64.authcontext.authorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.opentelemetry.api.trace.Span;
+
 /**
  * Default decision sink. Emits two lines per decision:
  *
@@ -41,6 +43,19 @@ public class LoggingDecisionListener implements AuthorizationDecisionListener {
                     d.requestId(), d.userId(), d.tenantId() == null ? "-" : d.tenantId(),
                     d.resourceType(), d.resourceId(),
                     d.error() == null ? "" : " error=" + d.error());
+        }
+
+        Span span = Span.current();
+        if (span.isRecording()) {
+            span.setAttribute("cerbos.decision", d.decision());
+            if ("deny".equals(d.decision()) || "error".equals(d.decision())) {
+                if (!d.reasons().isEmpty()) {
+                    span.setAttribute("cerbos.failed_rule", String.join(",", d.reasons()));
+                }
+                if (d.error() != null) {
+                    span.setAttribute("cerbos.error", d.error());
+                }
+            }
         }
     }
 }

@@ -276,14 +276,16 @@ public class OpenApiAuthPreprocessor {
                 + cerbosYamlMapper.writeValueAsString(doc);
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> enrich(final Map<String, Object> openApi) {
+        Map<String, Object> defaults = (Map<String, Object>) openApi.get("x-labs64-auth-defaults");
         Map<String, Object> paths = asMap(openApi.get("paths"), "paths");
         List<Map<String, Object>> routes = new ArrayList<>();
 
         for (Map.Entry<String, Object> pathEntry : paths.entrySet()) {
             String path = pathEntry.getKey();
             Map<String, Object> pathItem = asMap(pathEntry.getValue(), "paths." + path);
-            AuthPolicy pathAuth = AuthPolicy.from(pathItem.get(AUTH_EXTENSION), false);
+            AuthPolicy pathAuth = AuthPolicy.from(pathItem.get(AUTH_EXTENSION), false, defaults);
 
             for (Map.Entry<String, Object> operationEntry : pathItem.entrySet()) {
                 String method = operationEntry.getKey().toLowerCase(Locale.ROOT);
@@ -293,7 +295,7 @@ public class OpenApiAuthPreprocessor {
 
                 Map<String, Object> operation = asMap(operationEntry.getValue(), method.toUpperCase(Locale.ROOT)
                         + " " + path);
-                AuthPolicy auth = AuthPolicy.from(operation.getOrDefault(AUTH_EXTENSION, pathAuth.raw()), true);
+                AuthPolicy auth = AuthPolicy.from(operation.getOrDefault(AUTH_EXTENSION, pathAuth.raw()), true, defaults);
 
                 List<String> extraAnnotations = extraAnnotations(operation.get(EXTRA_ANNOTATION_EXTENSION));
                 extraAnnotations.addAll(annotations(auth, operation.get("operationId").toString()));

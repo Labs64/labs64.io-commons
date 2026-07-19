@@ -17,22 +17,30 @@ import java.util.Map;
  */
 record AuthPolicy(Object raw, boolean isPublic, boolean tenantRequired, List<String> scopes, String resourceType) {
 
-    static AuthPolicy from(final Object value, boolean isRequired) {
-        if (value == null) {
+    @SuppressWarnings("unchecked")
+    static AuthPolicy from(final Object value, boolean isRequired, final Map<String, Object> defaults) {
+        if (value == null && defaults == null) {
             if (isRequired) {
                 throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
                         + " must declare either 'public: true' or specify 'tenant'/'scopes'");
             }
             return new AuthPolicy(null, false, false, List.of(), null);
         }
-        if (!(value instanceof Map<?, ?> map)) {
+        if (value != null && !(value instanceof Map<?, ?>)) {
             throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION + " must be an object");
         }
 
-        boolean publicEndpoint = bool(map.get("public"));
-        boolean tenantRequired = bool(map.get("tenant"));
-        List<String> scopes = scopes(map.get("scopes"));
-        String resourceType = resourceType(map.get("resource"));
+        Map<String, Object> localMap = value != null ? (Map<String, Object>) value : Map.of();
+        Map<String, Object> defMap = defaults != null ? defaults : Map.of();
+
+        boolean localPublic = localMap.containsKey("public") ? bool(localMap.get("public")) : false;
+        boolean publicEndpoint = localPublic || bool(defMap.get("public"));
+
+        boolean tenantRequired = localPublic ? false : bool(localMap.containsKey("tenant") ? localMap.get("tenant") : defMap.get("tenant"));
+        List<String> scopes = localPublic ? List.of() : scopes(localMap.containsKey("scopes") ? localMap.get("scopes") : defMap.get("scopes"));
+        String resourceType = localPublic ? null : resourceType(localMap.containsKey("resource") ? localMap.get("resource") : defMap.get("resource"));
+
+        Object raw = value != null ? value : defMap;
 
         if (publicEndpoint && (tenantRequired || !scopes.isEmpty())) {
             throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
@@ -50,7 +58,7 @@ record AuthPolicy(Object raw, boolean isPublic, boolean tenantRequired, List<Str
             throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
                     + " must require a tenant when declaring a domain resource");
         }
-        return new AuthPolicy(value, publicEndpoint, tenantRequired, scopes, resourceType);
+        return new AuthPolicy(raw, publicEndpoint, tenantRequired, scopes, resourceType);
     }
 
     private static AuthPolicy publicEndpoint(final Object raw) {

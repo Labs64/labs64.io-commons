@@ -64,6 +64,11 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- For observability injection into Cerbos decisions -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
         <!-- Cerbos PDP client: the @Authorize domain PEP delegates decisions
              to the central Cerbos PDP over gRPC. CerbosAutoConfiguration is
              @ConditionalOnProperty(labs64.auth.authz.enabled)-guarded. -->

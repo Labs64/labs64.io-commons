@@ -252,6 +252,51 @@ class OpenApiAuthPreprocessorTest {
                 .withMessageContaining("must require a tenant when declaring a domain resource");
     }
 
+    @Test
+    @SuppressWarnings("unchecked")
+    void defaultsAreAppliedToOperationsWithoutAuth() {
+        Map<String, Object> openApi = map(
+                "x-labs64-auth-defaults", map("tenant", true),
+                "paths", map(
+                        "/payments", map(
+                                "get", map("operationId", "listPayments")
+                        )
+                )
+        );
+
+        Map<String, Object> policy = new OpenApiAuthPreprocessor().enrich(openApi);
+        Map<String, Object> paths = (Map<String, Object>) openApi.get("paths");
+        Map<String, Object> payments = (Map<String, Object>) paths.get("/payments");
+        Map<String, Object> listPayments = (Map<String, Object>) payments.get("get");
+
+        assertThat((List<String>) listPayments.get("x-operation-extra-annotation"))
+                .containsExactly("@io.labs64.authcontext.authorization.RequireTenant");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void publicEndpointOverridesTenantDefault() {
+        Map<String, Object> openApi = map(
+                "x-labs64-auth-defaults", map("tenant", true),
+                "paths", map(
+                        "/health", map(
+                                "get", map(
+                                        "operationId", "health",
+                                        "x-labs64-auth", map("public", true)
+                                )
+                        )
+                )
+        );
+
+        Map<String, Object> policy = new OpenApiAuthPreprocessor().enrich(openApi);
+        Map<String, Object> paths = (Map<String, Object>) openApi.get("paths");
+        Map<String, Object> health = (Map<String, Object>) paths.get("/health");
+        Map<String, Object> getHealth = (Map<String, Object>) health.get("get");
+
+        assertThat((List<String>) getHealth.get("x-operation-extra-annotation"))
+                .containsExactly("@io.labs64.authcontext.authorization.PublicEndpoint");
+    }
+
     private static Map<String, Object> map(final Object... entries) {
         Map<String, Object> map = new LinkedHashMap<>();
         for (int i = 0; i < entries.length; i += 2) {
