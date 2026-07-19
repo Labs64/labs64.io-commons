@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# RFC-07: regenerate the reference Cerbos policy set from reference-openapi.yaml
+# regenerate the reference Cerbos policy set from reference-openapi.yaml
 # via the commons OpenApiAuthPreprocessorCli. The committed output
 # (policies/*.yaml + policies/_schemas/*.json) is what validate.sh compiles and
 # truth-tests — OpenAPI stays the single source of truth (F3, no hand-editing).

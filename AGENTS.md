@@ -4,7 +4,7 @@ Guidance for AI agents working in this repository. Read this before making chang
 
 ## What this is
 
-Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, shared Spring Boot starters, plus the RFC-07 authorization assets: the engine-neutral `@Authorize` domain PEP in the Java starter (`io.labs64.authcontext.authorization`) with a Cerbos PDP client (`io.labs64.authcontext.cerbos`), feature-flagged via `labs64.auth.authz.*` (decisions delegated to the central Cerbos PDP over gRPC), the Cerbos-policy generator backend in `OpenApiAuthPreprocessor` (`--cerbos-output`/`--routes-output`), the decision-equivalence gate in `auth-policy-cerbos/`, and the `authz-queryplan-jpa` Data-PEP translator.
+Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-context libraries (Java + Python), which parse, enforce and propagate the trusted gateway header contract, shared Spring Boot starters, plus the authorization assets: the engine-neutral `@Authorize` domain PEP in the Java starter (`io.labs64.authcontext.authorization`) with a Cerbos PDP client (`io.labs64.authcontext.cerbos`), feature-flagged via `labs64.auth.authz.*` (decisions delegated to the central Cerbos PDP over gRPC), the Cerbos-policy generator backend in `OpenApiAuthPreprocessor` (`--cerbos-output`/`--routes-output`), the decision-equivalence gate in `auth-policy-cerbos/`, and the `authz-queryplan-jpa` Data-PEP translator.
 
 ## Critical guardrails
 

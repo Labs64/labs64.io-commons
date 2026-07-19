@@ -21,7 +21,7 @@ import io.labs64.authcontext.core.AuthContext;
 import io.labs64.authcontext.core.AuthHeaders;
 
 /**
- * Cerbos PDP client — the RFC-07 {@link AuthorizationService} implementation.
+ * Cerbos PDP client — the {@link AuthorizationService} implementation.
  * One {@code CheckResources} gRPC call per {@code @Authorize} decision; fail
  * closed on any client or transport error. Roles: {@code "service"} for
  * {@code svc:}-prefixed principals, else {@code "user"} (rules match

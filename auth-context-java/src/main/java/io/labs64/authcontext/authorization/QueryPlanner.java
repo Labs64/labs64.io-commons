@@ -3,7 +3,7 @@ package io.labs64.authcontext.authorization;
 import io.labs64.authcontext.core.AuthContext;
 
 /**
- * Data-PEP SPI (RFC-07): asks the PDP "which {@code <resourceType>} rows may
+ * Data-PEP SPI: asks the PDP "which {@code <resourceType>} rows may
  * this principal {@code <action>}?" and returns a {@link QueryPlan} the caller
  * translates into a storage-level filter (e.g. a JPA {@code Specification}).
  *

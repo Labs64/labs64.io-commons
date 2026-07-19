@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# RFC-07 CI gate: cerbos compile (schema/syntax) + truth-table tests
+# CI gate: cerbos compile (schema/syntax) + truth-table tests
 # (decision equivalence incl. the cross-tenant isolation invariant).
 set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

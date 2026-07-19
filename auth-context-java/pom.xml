@@ -64,7 +64,7 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- Cerbos PDP client (RFC-07): the @Authorize domain PEP delegates decisions
+        <!-- Cerbos PDP client: the @Authorize domain PEP delegates decisions
              to the central Cerbos PDP over gRPC. CerbosAutoConfiguration is
              @ConditionalOnProperty(labs64.auth.authz.enabled)-guarded. -->
         <dependency>

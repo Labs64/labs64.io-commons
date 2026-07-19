@@ -15,7 +15,7 @@ import jakarta.persistence.criteria.Root;
 
 /**
  * Translates a {@link QueryPlan} into a Spring Data JPA {@link Specification}
- * (RFC-07 Data PEP). Bounded on purpose: only {@code and|or|not|eq|in} are
+ * (Data PEP). Bounded on purpose: only {@code and|or|not|eq|in} are
  * supported — anything else fails closed with {@link AuthorizationException}
  * rather than silently widening the query.
  *

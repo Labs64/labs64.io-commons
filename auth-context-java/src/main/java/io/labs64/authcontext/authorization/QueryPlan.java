@@ -2,7 +2,7 @@ package io.labs64.authcontext.authorization;
 
 /**
  * Engine-neutral result of a {@link QueryPlanner#plan} call — the row-filter
- * decision for a list/query action (RFC-07).
+ * decision for a list/query action.
  */
 public sealed interface QueryPlan permits QueryPlan.AlwaysAllowed, QueryPlan.AlwaysDenied, QueryPlan.Conditional {
 

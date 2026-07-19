@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <name>Labs64.IO :: Authz Query-Plan (JPA)</name>
-    <description>Translates a Cerbos PlanResources query plan into a Spring Data JPA Specification (RFC-07 Data PEP)</description>
+    <description>Translates a Cerbos PlanResources query plan into a Spring Data JPA Specification (Data PEP)</description>
     <url>https://labs64.io</url>
 
     <parent>

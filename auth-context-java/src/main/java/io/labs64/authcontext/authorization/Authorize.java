@@ -7,7 +7,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Fine-grained domain authorization on a handler method (RFC-07).
+ * Fine-grained domain authorization on a handler method.
  *
  * <p>Additive to the coarse {@code @RequireScopes}/{@code @RequireTenant}
  * pre-filters: those stay as fast gates, the external PDP is the authoritative

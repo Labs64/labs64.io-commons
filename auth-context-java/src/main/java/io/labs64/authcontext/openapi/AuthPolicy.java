@@ -9,7 +9,7 @@ import java.util.Map;
  * {@code x-labs64-auth}.
  *
  * <p>{@code resourceType} (optional, {@code x-labs64-auth.resource}) declares
- * the Cedar domain resource type this operation authorizes against — e.g.
+ * the Cerbos domain resource type this operation authorizes against — e.g.
  * {@code Payment}. It is the OpenAPI-native source for the generated Tier-2
  * domain policies: only operations that declare it get a domain
  * {@code permit} and contribute their type's tenant guard. Absent ⇒ the

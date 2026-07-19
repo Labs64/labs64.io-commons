@@ -14,7 +14,7 @@ import io.labs64.authcontext.authorization.PlanExpr;
  * Maps a Cerbos {@code PlanResources} filter (a proto {@link Operand} oneof
  * tree) into the engine-neutral {@link PlanExpr} AST — the single point that
  * knows the Cerbos proto shape, keeping the query-plan translators
- * vendor-agnostic (RFC-07).
+ * vendor-agnostic.
  */
 final class CerbosPlanMapper {
 

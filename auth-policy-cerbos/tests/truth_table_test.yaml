@@ -1,8 +1,8 @@
-# RFC-07 decision-equivalence truth table. Encodes the same personas and
+# decision-equivalence truth table. Encodes the same personas and
 # expectations as the retired Cedar validate.sh + cedar-request-vectors.json —
 # including the cross-tenant isolation invariant (mallory must be denied a
 # same-action pay on another tenant's Payment).
-name: RFC-07 decision equivalence
+name: decision equivalence
 description: Edge + domain decision parity, incl. the cross-tenant isolation gate.
 
 principals:

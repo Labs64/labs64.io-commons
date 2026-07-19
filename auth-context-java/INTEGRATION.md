@@ -10,14 +10,13 @@ The pipeline has four stages:
 OpenAPI spec (with x-labs64-auth)
   → OpenApiAuthPreprocessorCli (build-time)
     → Cleaned OpenAPI (annotations injected)
-    → auth-policy.cerbos (gateway route policy)
+    → Cerbos resource policies (YAML) + routing manifest
   → openapi-generator (generates Java interfaces with annotations)
-  → auth-context-spring-boot-starter (runtime enforcement)
-  → GET /.well-known/auth-policy + /.well-known/auth-policy.cerbos (runtime, served by the starter for the gateway ACS)
+  → auth-context-spring-boot-starter (runtime enforcement via @Authorize interceptors and central Cerbos PDP)
 ```
 
 1. **Author**: Add `x-labs64-auth` to each endpoint in your OpenAPI spec
-2. **Build-time**: The preprocessor strips the extension, injects Java annotations (`@RequireTenant`, `@RequireScopes`, `@PublicEndpoint`) into the generated OpenAPI, and emits `auth-policy.cerbos`
+2. **Build-time**: The preprocessor strips the extension, injects Java annotations (`@RequireTenant`, `@RequireScopes`, `@PublicEndpoint`) into the generated OpenAPI, and emits Cerbos resource policies in YAML + routes manifest.
 3. **Code generation**: OpenAPI Generator produces Java API interfaces with the injected annotations
 4. **Runtime**: `auth-context-spring-boot-starter` auto-configures filters and interceptors that enforce the annotations
 
@@ -131,14 +130,12 @@ Add three things to your `pom.xml`:
     <exec-maven-plugin.version>3.6.2</exec-maven-plugin.version>
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
-    <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.cerbos</auth-policy.generated>
-    <!-- Cerbos policies generated from x-labs64-auth.
-         auth-policy.module MUST equal the module's gateway path prefix (e.g.
-         payment-gateway) — it is baked into the Cerbos resource ids.
-         edge   → auth-policy.cerbos        (Tier 1, served to the ACS/traefik)
-         domain → auth-policy-domain.cerbos (Tier 2, module @Authorize PEP) -->
-    <auth-policy-cerbos.generated>${project.build.directory}/generated-resources/auth-policy.cerbos</auth-policy-cerbos.generated>
-    <auth-policy-cerbos-domain.generated>${project.build.directory}/generated-resources/auth-policy-domain.cerbos</auth-policy-cerbos-domain.generated>
+    <!-- Cerbos policies + routes manifest generated from x-labs64-auth.
+         auth-policy.module must equal the module's gateway prefix
+         (= policy-sources.yaml name); it is baked into the Cerbos resource
+         kind (your-module -> your_module_api). Generated output is a build
+         artifact only — the central Cerbos PDP owns the live policy set. -->
+    <auth-policy-cerbos.output>${project.build.directory}/cerbos</auth-policy-cerbos.output>
     <auth-policy.module>your-module</auth-policy.module>
 </properties>
 ```
@@ -188,9 +185,7 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
                             <argument>--openapi-output</argument>
                             <argument>${openapi.generated}</argument>
                             <argument>--cerbos-output</argument>
-                            <argument>${auth-policy-cerbos.generated}</argument>
-                            <argument>--cerbos-domain-output</argument>
-                            <argument>${auth-policy-cerbos-domain.generated}</argument>
+                            <argument>${auth-policy-cerbos.output}</argument>
                             <argument>--module</argument>
                             <argument>${auth-policy.module}</argument>
                         </arguments>
@@ -231,7 +226,7 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
             </executions>
         </plugin>
 
-        <!-- 3. Build helper: add generated resources (auth-policy.cerbos) to classpath -->
+        <!-- 3. Build helper: add generated resources to classpath -->
         <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
@@ -273,28 +268,23 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
 
 Run `mvn clean compile` and check three outputs:
 
-### 1. Generated auth-policy.cerbos
+### 1. Generated Cerbos output
 
 ```bash
-cat target/generated-resources/auth-policy.cerbos
+ls target/cerbos
+# Should contain routes.yaml and Cerbos resource policies (e.g., your_module_api.yaml)
+cat target/cerbos/routes.yaml
 ```
 
 Should contain route entries for each endpoint:
 
-```json
-{
-  "version": 1,
-  "routes": [
-    {
-      "operationId": "publishEvent",
-      "method": "POST",
-      "path": "/audit/publish",
-      "public": false,
-      "tenantRequired": true,
-      "scopes": ["audit-event:write"]
-    }
-  ]
-}
+```yaml
+routes:
+  /audit/publish:
+    POST:
+      module: auditflow
+      operationId: publishEvent
+      public: false
 ```
 
 ### 2. Generated OpenAPI with annotations
@@ -347,48 +337,16 @@ labs64:
 
 4. **`@PublicEndpoint`**: Bypasses both interceptors. The path must also be in `labs64.auth-context.public-paths` to pass the filter.
 
-## The `/.well-known/auth-policy` endpoints
+## Policy Distribution to the Central PDP
 
-When `auth-policy.cerbos` is on the classpath (Step 2c's `add-resource`), the
-starter auto-registers a controller serving it verbatim at
-`GET /.well-known/auth-policy`. The gateway's traefik-authproxy discovers
-modules via the `labs64.io/auth-policy=true` Service label and fetches this
-endpoint in-cluster to build its edge authorization table.
+Services **no longer serve** authorization policies at runtime (the `/.well-known/auth-policy` endpoints have been deleted). Instead, the generated Cerbos policies and route manifests are collected from the build artifacts (`target/cerbos`) and distributed to the Central PDP via a GitOps CI pipeline. 
 
-The same controller serves the build-generated **Tier-1 edge** Cerbos policy set
-(`auth-policy.cerbos`, emitted when the preprocessor is invoked with
-`--cerbos-output` + `--module`) at `GET /.well-known/auth-policy.cerbos`
-(text/plain; 404 when the module does not generate it). Each generated permit
-also carries `@path`/`@method`/`@public`/`@tenantRequired`/`@scopes`
-annotations — the same fields `auth-policy.cerbos`'s routes carry — so this one
-file doubles as the OpenAPI-template routing table. **The traefik-authproxy's
-live-discovery path fetches only `auth-policy.cerbos`** (not the JSON document)
-and rebuilds its routing table from those annotations
-(`policy_store.parse_cerbos_document`), then evaluates it for the
-authorization decision according to `CEDAR_MODE`. `auth-policy.cerbos` is still
-served and still on the classpath — it remains the routing source for the
-**signed-bundle** policy path (`policy_bundle.py`, which packages
-`modules/<name>.json` today) — but a module integrating only for live
-discovery must serve `auth-policy.cerbos` for the ACS to route to it at all.
-The `--module` name must equal the module's gateway path prefix (e.g.
-`payment-gateway`), because it is baked into the Cerbos resource ids.
+1. **Build Time**: The OpenAPI preprocessor emits Cerbos YAML policies (`<module>_api.yaml` and `<DomainResource>.yaml`) and a `routes.yaml` manifest.
+2. **CI Pipeline**: A shared script (`build-cerbos-policies.sh`) aggregates the `target/cerbos` directories from all modules into a centralized policy distribution format.
+3. **Runtime**: The central Cerbos PDP loads these generated policies from a mounted ConfigMap. The Traefik Authproxy loads the `routes.yaml` manifests to understand the path-to-operation mappings.
+4. **Enforcement**: When a request arrives, the Traefik Authproxy queries the central Cerbos PDP for edge reachability (Tier 1). Then, inside your module, the `@Authorize` interceptors from `auth-context-spring-boot-starter` query the central Cerbos PDP for fine-grained domain authorization (Tier 2).
 
-The **Tier-2 domain** set (`auth-policy-domain.cerbos`, from
-`--cerbos-domain-output`) is **not** served over the well-known endpoint — it is
-consumed only in-process by this module's `@Authorize` PEP from the classpath
-(`labs64.auth.cerbos.policy-location`, default `classpath:auth-policy-domain.cerbos`).
-Both files are generated from the one `x-labs64-auth` source, so traefik and the
-module enforce the same OpenAPI-derived contract.
-
-- Both paths are **unconditionally public** in `AuthContextFilter` — they
-  cannot be disabled via `public-paths`, because the ACS must reach them
-  before it can authorize anything.
-- It is **not** exposed through the external gateway: module IngressRoutes
-  only publish API prefixes. The policy content is derived from the OpenAPI
-  spec (whose `/v3/api-docs` is public), so no secrets are involved.
-- Scope matching at the edge and in `RequireScopesInterceptor` is **OR**
-  (any listed scope suffices). The edge tenant check is presence-only —
-  tenant validation stays a module concern via `AuthContext.tenantId()`.
+This disconnected topology guarantees zero engine footprint inside the Java application, as the policy engine evaluates entirely out-of-process.
 
 ### Accessing the auth context in controllers
 
@@ -439,34 +397,22 @@ paths:
 
 ### Generated outputs
 
-**auth-policy.cerbos** (signed-bundle routing source):
-```json
-{
-  "version": 1,
-  "routes": [{
-    "operationId": "publishEvent",
-    "method": "POST",
-    "path": "/audit/publish",
-    "public": false,
-    "tenantRequired": true,
-    "scopes": ["audit-event:write"]
-  }]
-}
-```
-
-**auth-policy.cerbos** (live-discovery routing + decision source — same fields, as annotations):
-```
-@id("auditflow::publishEvent")
-@path("/audit/publish")
-@method("POST")
-@public("false")
-@tenantRequired("true")
-@scopes("audit-event:write")
-permit(
-  principal,
-  action == Labs64IO::Action::"invoke",
-  resource == Labs64IO::ApiOperation::"auditflow::publishEvent"
-) when { (context has tenant) && (context.scopes.contains("audit-event:write")) };
+**Generated Cerbos edge policy (`target/cerbos/auditflow_api.yaml`)**:
+```yaml
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  version: default
+  resource: auditflow_api
+  rules:
+    - actions: ["publishEvent"]
+      effect: EFFECT_ALLOW
+      roles: ["*"]
+      condition:
+        match:
+          all:
+            of:
+              - expr: has(request.principal.attr.tenant)
+              - expr: '"audit-event:write" in request.principal.attr.scopes'
 ```
 
 **Generated AuditEventApi.java**:

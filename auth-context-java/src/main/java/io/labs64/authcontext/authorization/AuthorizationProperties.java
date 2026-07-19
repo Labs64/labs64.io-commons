@@ -3,7 +3,7 @@ package io.labs64.authcontext.authorization;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration for the {@code @Authorize} domain PEP (RFC-07).
+ * Configuration for the {@code @Authorize} domain PEP.
  *
  * <p>{@code labs64.auth.authz.enabled=true} activates the {@code @Authorize}
  * interceptor, which delegates decisions to the central Cerbos PDP at

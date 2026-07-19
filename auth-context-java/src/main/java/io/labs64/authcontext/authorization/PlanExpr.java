@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Engine-neutral query-plan expression tree — the abstract syntax the PDP's
  * conditional plan is mapped into, so downstream translators (e.g. JPA
- * {@code Specification}) never depend on a vendor proto (RFC-07).
+ * {@code Specification}) never depend on a vendor proto.
  */
 public sealed interface PlanExpr permits PlanExpr.Op, PlanExpr.Var, PlanExpr.Val {
 

@@ -3,10 +3,10 @@ package io.labs64.authcontext.authorization;
 import io.labs64.authcontext.core.AuthContext;
 
 /**
- * Engine-neutral PDP client SPI — RFC-07.
+ * Engine-neutral PDP client SPI — .
  *
  * <p>Decouples the {@code @Authorize} PEP from any concrete policy engine. The
- * RFC-07 implementation ({@code CerbosAuthorizationService}) talks to the
+ * implementation ({@code CerbosAuthorizationService}) talks to the
  * central Cerbos PDP over gRPC; the contract is intentionally engine-agnostic
  * so the interceptor and the module resolvers never depend on a vendor SDK.
  *

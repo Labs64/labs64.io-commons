@@ -55,7 +55,7 @@ public class OpenApiAuthPreprocessor {
     }
 
     /**
-     * Full pipeline (RFC-07). Writes the enriched OpenAPI and, when the
+     * Full pipeline. Writes the enriched OpenAPI and, when the
      * corresponding output is given, the Cerbos policy set
      * ({@code policies/*.yaml} resource policies plus
      * {@code policies/_schemas/*.json} schemas), the routes manifest, and the
@@ -98,7 +98,7 @@ public class OpenApiAuthPreprocessor {
     /**
      * The public operations as {@code <METHOD> <path-template>} entries — the
      * backend {@code AuthContextFilter}'s public-path source, generated from the
-     * SAME {@code x-labs64-auth.public} as the edge/domain Cedar so no public
+     * SAME {@code x-labs64-auth.public} as the edge/domain Cerbos so no public
      * path is ever hand-maintained. Only OpenAPI operations appear here; non-API
      * surfaces (actuator, docs) stay configured prefixes on the filter.
      */
@@ -128,7 +128,7 @@ public class OpenApiAuthPreprocessor {
         return module.replace('-', '_') + "_api";
     }
 
-    /** CEL condition mirroring the Cedar semantics 1:1 (empty for public ops). */
+    /** CEL condition mirroring the Cerbos semantics 1:1 (empty for public ops). */
     @SuppressWarnings("unchecked")
     private String celCondition(final Map<String, Object> route) {
         if (Boolean.TRUE.equals(route.get("public"))) {
@@ -181,7 +181,7 @@ public class OpenApiAuthPreprocessor {
 
     /**
      * Translates the enriched policy document into Cerbos resource policies —
-     * the RFC-07 replacement for the two Cedar tiers, from the SAME
+     * the replacement for the two Cedar tiers, from the SAME
      * {@code x-labs64-auth} so OpenAPI stays the single source of truth.
      *
      * <p>Emits one <b>edge</b> resource policy per module (kind

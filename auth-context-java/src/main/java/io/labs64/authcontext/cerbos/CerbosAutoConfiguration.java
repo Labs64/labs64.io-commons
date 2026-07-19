@@ -22,7 +22,7 @@ import io.labs64.authcontext.authorization.LoggingDecisionListener;
 import io.labs64.authcontext.authorization.ResourceResolver;
 
 /**
- * {@code @Authorize} domain PEP wiring (RFC-07). Opt-in via
+ * {@code @Authorize} domain PEP wiring. Opt-in via
  * {@code labs64.auth.authz.enabled=true}; decisions are delegated to the
  * central Cerbos PDP at {@code labs64.auth.authz.pdp-address}. Registered after
  * the coarse interceptors so {@code @RequireScopes}/{@code @RequireTenant} stay

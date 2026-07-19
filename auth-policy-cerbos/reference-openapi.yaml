@@ -1,11 +1,11 @@
-# RFC-07 reference OpenAPI fixture — the decision-equivalence gate's single
+# reference OpenAPI fixture — the decision-equivalence gate's single
 # source. The three x-labs64-auth patterns (public / tenant+scopes+resource /
 # scopes-only) are generated into Cerbos policy by generate.sh and exercised by
 # tests/truth_table_test.yaml. Module is pinned to "payment-gateway" so the edge
 # resource kind is "payment_gateway_api".
 openapi: 3.0.3
 info:
-  title: RFC-07 reference API
+  title: reference API
   version: 1.0.0
 paths:
   /payment-definitions:
