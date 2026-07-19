@@ -4,7 +4,7 @@
 
     <groupId>io.labs64</groupId>
     <artifactId>auth-context-spring-boot-starter</artifactId>
-    <version>0.3.2</version>
+    <version>0.4.0</version>
     <packaging>jar</packaging>
 
     <name>Labs64.IO :: Auth Context (Spring Boot Starter)</name>
@@ -64,16 +64,26 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
             <optional>true</optional>
         </dependency>
-        <!-- Cedar domain PEP: optional — modules opt in by adding this
-             dependency themselves (uber classifier bundles the native FFI for
-             linux/macos/windows, ~27 MB) plus labs64.auth.cedar.enabled=true.
-             The cedar autoconfiguration is @ConditionalOnClass-guarded. -->
+        <!-- For observability injection into Cerbos decisions -->
         <dependency>
-            <groupId>com.cedarpolicy</groupId>
-            <artifactId>cedar-java</artifactId>
-            <version>4.10.0</version>
-            <classifier>uber</classifier>
-            <optional>true</optional>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+        <!-- Cerbos PDP client: the @Authorize domain PEP delegates decisions
+             to the central Cerbos PDP over gRPC. CerbosAutoConfiguration is
+             @ConditionalOnProperty(labs64.auth.authz.enabled)-guarded. -->
+        <dependency>
+            <groupId>dev.cerbos</groupId>
+            <artifactId>cerbos-sdk-java</artifactId>
+            <version>0.18.0</version>
+        </dependency>
+        <!-- The SDK declares protobuf-java at runtime scope, but its PlanResources
+             filter API exposes protobuf types (Operand oneof) that CerbosPlanMapper
+             walks at compile time. Pinned to the SDK's transitive version. -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>4.34.2</version>
         </dependency>
         <!-- Test support (@WithAuthContext) ships in the main jar; JUnit stays optional for consumers -->
         <dependency>

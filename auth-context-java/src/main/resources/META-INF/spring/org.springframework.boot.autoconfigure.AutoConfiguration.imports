@@ -1,2 +1,2 @@
 io.labs64.authcontext.autoconfigure.AuthContextAutoConfiguration
-io.labs64.authcontext.cedar.CedarAutoConfiguration
+io.labs64.authcontext.cerbos.CerbosAutoConfiguration

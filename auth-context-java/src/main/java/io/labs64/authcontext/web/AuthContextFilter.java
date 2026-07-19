@@ -88,11 +88,6 @@ public class AuthContextFilter extends OncePerRequestFilter {
     }
 
     private boolean isPublicPath(String method, String uri) {
-        if (AuthPolicyController.AUTH_POLICY_CEDAR_PATH.equals(uri)) {
-            // Always public: the ACS must be able to fetch the policy that
-            // gates everything else, regardless of configured public-paths.
-            return true;
-        }
         // OpenAPI operations: matched per method+template from the build-generated
         // list (derived from x-labs64-auth.public) — OpenAPI is the source of truth.
         if (publicPathMatcher.matches(method, uri)) {
