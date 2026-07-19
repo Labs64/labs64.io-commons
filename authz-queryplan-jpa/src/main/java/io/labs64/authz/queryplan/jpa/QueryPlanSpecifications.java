@@ -15,7 +15,7 @@ import jakarta.persistence.criteria.Root;
 
 /**
  * Translates a {@link QueryPlan} into a Spring Data JPA {@link Specification}
- * (Data PEP). Bounded on purpose: only {@code and|or|not|eq|in} are
+ * (Data PEP). Bounded on purpose: only {@code and|or|not|eq|ne|in} are
  * supported — anything else fails closed with {@link AuthorizationException}
  * rather than silently widening the query.
  *
@@ -55,6 +55,7 @@ public final class QueryPlanSpecifications {
                     .map(o -> toPredicate(o, root, cb, fields)).toArray(Predicate[]::new));
             case "not" -> cb.not(toPredicate(op.operands().get(0), root, cb, fields));
             case "eq" -> cb.equal(root.get(field(op, fields)), value(op));
+            case "ne" -> cb.notEqual(root.get(field(op, fields)), value(op));
             case "in" -> root.get(field(op, fields)).in((Collection<?>) value(op));
             default -> throw new AuthorizationException("query plan: unsupported operator " + op.operator());
         };

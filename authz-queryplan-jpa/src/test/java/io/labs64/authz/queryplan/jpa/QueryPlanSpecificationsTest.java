@@ -46,6 +46,22 @@ class QueryPlanSpecificationsTest {
     }
 
     @Test
+    void neTranslatesToCriteriaNotEqualOnMappedField() {
+        Root<Object> root = mock(Root.class);
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        Path<Object> path = mock(Path.class);
+        Predicate predicate = mock(Predicate.class);
+        when(root.get("tenantId")).thenReturn(path);
+        when(cb.notEqual(path, "t_100")).thenReturn(predicate);
+
+        PlanExpr.Op ne = new PlanExpr.Op("ne",
+                List.of(new PlanExpr.Var("request.resource.attr.tenant"), new PlanExpr.Val("t_100")));
+        Specification<Object> spec = QueryPlanSpecifications.toSpecification(new QueryPlan.Conditional(ne), FIELDS);
+
+        assertThat(spec.toPredicate(root, null, cb)).isSameAs(predicate);
+    }
+
+    @Test
     void inTranslatesToCriteriaIn() {
         Root<Object> root = mock(Root.class);
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
