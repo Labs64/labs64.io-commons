@@ -181,7 +181,7 @@ public class OpenApiAuthPreprocessor {
 
     /**
      * Translates the enriched policy document into Cerbos resource policies —
-     * the replacement for the two Cedar tiers, from the SAME
+     * the replacement for the two legacy tiers, from the SAME
      * {@code x-labs64-auth} so OpenAPI stays the single source of truth.
      *
      * <p>Emits one <b>edge</b> resource policy per module (kind

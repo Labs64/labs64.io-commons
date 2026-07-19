@@ -1,5 +1,5 @@
 # decision-equivalence truth table. Encodes the same personas and
-# expectations as the retired Cedar validate.sh + cedar-request-vectors.json —
+# expectations as the retired validate.sh + request-vectors.json —
 # including the cross-tenant isolation invariant (mallory must be denied a
 # same-action pay on another tenant's Payment).
 name: decision equivalence
