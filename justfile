@@ -5,7 +5,7 @@ default:
     @just --list
 
 # build + test all libraries
-build: java openapi queryplan python
+build: java install-java openapi queryplan python
 
 # build + test the Java starter
 java:

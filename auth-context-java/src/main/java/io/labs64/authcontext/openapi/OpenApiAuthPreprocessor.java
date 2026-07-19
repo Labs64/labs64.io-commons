@@ -231,18 +231,29 @@ public class OpenApiAuthPreprocessor {
     @SuppressWarnings("unchecked")
     public Map<String, String> cerbosSchemas(final Map<String, Object> policy) throws IOException {
         Map<String, String> files = new LinkedHashMap<>();
-        files.put("principal.json", jsonMapper.writeValueAsString(Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "scopes", Map.of("type", "array", "items", Map.of("type", "string")),
-                        "tenant", Map.of("type", "string")),
-                "additionalProperties", true)));
+        // LinkedHashMap throughout (not Map.of()): schemas are committed, generated
+        // artifacts — Map.of()'s iteration order is randomized per JVM launch, which
+        // would make generate.sh non-reproducible (spurious diffs with zero policy change).
+        Map<String, Object> scopesProperty = new LinkedHashMap<>();
+        scopesProperty.put("type", "array");
+        scopesProperty.put("items", Map.of("type", "string"));
+        Map<String, Object> principalProperties = new LinkedHashMap<>();
+        principalProperties.put("scopes", scopesProperty);
+        principalProperties.put("tenant", Map.of("type", "string"));
+        Map<String, Object> principalSchema = new LinkedHashMap<>();
+        principalSchema.put("type", "object");
+        principalSchema.put("properties", principalProperties);
+        principalSchema.put("additionalProperties", true);
+        files.put("principal.json", jsonMapper.writeValueAsString(principalSchema));
         for (Map<String, Object> route : (List<Map<String, Object>>) policy.get("routes")) {
             if (route.get("resource") instanceof String type && !type.isBlank()) {
-                files.putIfAbsent(type + ".json", jsonMapper.writeValueAsString(Map.of(
-                        "type", "object",
-                        "properties", Map.of("tenant", Map.of("type", "string")),
-                        "additionalProperties", true)));
+                Map<String, Object> resourceProperties = new LinkedHashMap<>();
+                resourceProperties.put("tenant", Map.of("type", "string"));
+                Map<String, Object> resourceSchema = new LinkedHashMap<>();
+                resourceSchema.put("type", "object");
+                resourceSchema.put("properties", resourceProperties);
+                resourceSchema.put("additionalProperties", true);
+                files.putIfAbsent(type + ".json", jsonMapper.writeValueAsString(resourceSchema));
             }
         }
         return files;

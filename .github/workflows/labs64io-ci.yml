@@ -26,8 +26,12 @@ jobs:
           cache: maven
       - name: Test auth-context-java
         run: cd auth-context-java && mvn -B -ntp test
+      - name: Install auth-context-java (dependency for authz-queryplan-jpa)
+        run: cd auth-context-java && mvn -B -ntp -DskipTests install
       - name: Test openapi-spring-boot-starter
         run: cd openapi-spring-boot-starter && mvn -B -ntp test
+      - name: Test authz-queryplan-jpa
+        run: cd authz-queryplan-jpa && mvn -B -ntp test
 
   python:
     runs-on: ubuntu-latest
