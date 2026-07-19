@@ -3,7 +3,7 @@ package io.labs64.authcontext.authorization;
 import io.labs64.authcontext.core.AuthContext;
 
 /**
- * Engine-neutral PDP client SPI — .
+ * Engine-neutral PDP client SPI.
  *
  * <p>Decouples the {@code @Authorize} PEP from any concrete policy engine. The
  * implementation ({@code CerbosAuthorizationService}) talks to the
