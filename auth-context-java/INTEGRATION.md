@@ -10,14 +10,14 @@ The pipeline has four stages:
 OpenAPI spec (with x-labs64-auth)
   → OpenApiAuthPreprocessorCli (build-time)
     → Cleaned OpenAPI (annotations injected)
-    → auth-policy.cedar (gateway route policy)
+    → auth-policy.cerbos (gateway route policy)
   → openapi-generator (generates Java interfaces with annotations)
   → auth-context-spring-boot-starter (runtime enforcement)
-  → GET /.well-known/auth-policy + /.well-known/auth-policy.cedar (runtime, served by the starter for the gateway ACS)
+  → GET /.well-known/auth-policy + /.well-known/auth-policy.cerbos (runtime, served by the starter for the gateway ACS)
 ```
 
 1. **Author**: Add `x-labs64-auth` to each endpoint in your OpenAPI spec
-2. **Build-time**: The preprocessor strips the extension, injects Java annotations (`@RequireTenant`, `@RequireScopes`, `@PublicEndpoint`) into the generated OpenAPI, and emits `auth-policy.cedar`
+2. **Build-time**: The preprocessor strips the extension, injects Java annotations (`@RequireTenant`, `@RequireScopes`, `@PublicEndpoint`) into the generated OpenAPI, and emits `auth-policy.cerbos`
 3. **Code generation**: OpenAPI Generator produces Java API interfaces with the injected annotations
 4. **Runtime**: `auth-context-spring-boot-starter` auto-configures filters and interceptors that enforce the annotations
 
@@ -86,9 +86,9 @@ paths:
 ### Domain (Tier-2) resource authorization
 
 Declare `resource: <Type>` to have the operation authorized in-process by the
-module's `@Authorize` PEP against a typed Cedar resource. This is
+module's `@Authorize` PEP against a typed Cerbos resource. This is
 the OpenAPI-native source for the generated domain policy set
-(`auth-policy-domain.cedar`): the preprocessor emits one `permit` keyed on the
+(`auth-policy-domain.cerbos`): the preprocessor emits one `permit` keyed on the
 operationId, conditioned on the same `tenant`/`scopes`, plus one structural
 cross-tenant guard per resource type. Operations without `resource` are
 edge-only (coarse reachability).
@@ -106,8 +106,8 @@ paths:
 ```
 
 The resource `<Type>` must be declared in the shared schema
-(`labs64.io-commons/auth-policy-cedar/schema.cedarschema`), and the module
-supplies the resource's `tenant` at request time via a `CedarEntityResolver`.
+(`labs64.io-commons/auth-policy-cerbos/schema.cerbosschema`), and the module
+supplies the resource's `tenant` at request time via a `CerbosEntityResolver`.
 Fine-grained resource-attribute rules (workflow status, ownership) are **not**
 expressible from OpenAPI — they stay in the service layer (and later Postgres
 RLS), by design.
@@ -131,14 +131,14 @@ Add three things to your `pom.xml`:
     <exec-maven-plugin.version>3.6.2</exec-maven-plugin.version>
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
-    <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.cedar</auth-policy.generated>
-    <!-- Cedar policies generated from x-labs64-auth.
+    <auth-policy.generated>${project.build.directory}/generated-resources/auth-policy.cerbos</auth-policy.generated>
+    <!-- Cerbos policies generated from x-labs64-auth.
          auth-policy.module MUST equal the module's gateway path prefix (e.g.
-         payment-gateway) — it is baked into the Cedar resource ids.
-         edge   → auth-policy.cedar        (Tier 1, served to the ACS/traefik)
-         domain → auth-policy-domain.cedar (Tier 2, module @Authorize PEP) -->
-    <auth-policy-cedar.generated>${project.build.directory}/generated-resources/auth-policy.cedar</auth-policy-cedar.generated>
-    <auth-policy-cedar-domain.generated>${project.build.directory}/generated-resources/auth-policy-domain.cedar</auth-policy-cedar-domain.generated>
+         payment-gateway) — it is baked into the Cerbos resource ids.
+         edge   → auth-policy.cerbos        (Tier 1, served to the ACS/traefik)
+         domain → auth-policy-domain.cerbos (Tier 2, module @Authorize PEP) -->
+    <auth-policy-cerbos.generated>${project.build.directory}/generated-resources/auth-policy.cerbos</auth-policy-cerbos.generated>
+    <auth-policy-cerbos-domain.generated>${project.build.directory}/generated-resources/auth-policy-domain.cerbos</auth-policy-cerbos-domain.generated>
     <auth-policy.module>your-module</auth-policy.module>
 </properties>
 ```
@@ -187,10 +187,10 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
                             <argument>${openapi.source}</argument>
                             <argument>--openapi-output</argument>
                             <argument>${openapi.generated}</argument>
-                            <argument>--cedar-output</argument>
-                            <argument>${auth-policy-cedar.generated}</argument>
-                            <argument>--cedar-domain-output</argument>
-                            <argument>${auth-policy-cedar-domain.generated}</argument>
+                            <argument>--cerbos-output</argument>
+                            <argument>${auth-policy-cerbos.generated}</argument>
+                            <argument>--cerbos-domain-output</argument>
+                            <argument>${auth-policy-cerbos-domain.generated}</argument>
                             <argument>--module</argument>
                             <argument>${auth-policy.module}</argument>
                         </arguments>
@@ -231,7 +231,7 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
             </executions>
         </plugin>
 
-        <!-- 3. Build helper: add generated resources (auth-policy.cedar) to classpath -->
+        <!-- 3. Build helper: add generated resources (auth-policy.cerbos) to classpath -->
         <plugin>
             <groupId>org.codehaus.mojo</groupId>
             <artifactId>build-helper-maven-plugin</artifactId>
@@ -273,10 +273,10 @@ The preprocessor must run **before** the OpenAPI generator. Add `exec-maven-plug
 
 Run `mvn clean compile` and check three outputs:
 
-### 1. Generated auth-policy.cedar
+### 1. Generated auth-policy.cerbos
 
 ```bash
-cat target/generated-resources/auth-policy.cedar
+cat target/generated-resources/auth-policy.cerbos
 ```
 
 Should contain route entries for each endpoint:
@@ -349,34 +349,34 @@ labs64:
 
 ## The `/.well-known/auth-policy` endpoints
 
-When `auth-policy.cedar` is on the classpath (Step 2c's `add-resource`), the
+When `auth-policy.cerbos` is on the classpath (Step 2c's `add-resource`), the
 starter auto-registers a controller serving it verbatim at
 `GET /.well-known/auth-policy`. The gateway's traefik-authproxy discovers
 modules via the `labs64.io/auth-policy=true` Service label and fetches this
 endpoint in-cluster to build its edge authorization table.
 
-The same controller serves the build-generated **Tier-1 edge** Cedar policy set
-(`auth-policy.cedar`, emitted when the preprocessor is invoked with
-`--cedar-output` + `--module`) at `GET /.well-known/auth-policy.cedar`
+The same controller serves the build-generated **Tier-1 edge** Cerbos policy set
+(`auth-policy.cerbos`, emitted when the preprocessor is invoked with
+`--cerbos-output` + `--module`) at `GET /.well-known/auth-policy.cerbos`
 (text/plain; 404 when the module does not generate it). Each generated permit
 also carries `@path`/`@method`/`@public`/`@tenantRequired`/`@scopes`
-annotations — the same fields `auth-policy.cedar`'s routes carry — so this one
+annotations — the same fields `auth-policy.cerbos`'s routes carry — so this one
 file doubles as the OpenAPI-template routing table. **The traefik-authproxy's
-live-discovery path fetches only `auth-policy.cedar`** (not the JSON document)
+live-discovery path fetches only `auth-policy.cerbos`** (not the JSON document)
 and rebuilds its routing table from those annotations
-(`policy_store.parse_cedar_document`), then evaluates it for the
-authorization decision according to `CEDAR_MODE`. `auth-policy.cedar` is still
+(`policy_store.parse_cerbos_document`), then evaluates it for the
+authorization decision according to `CEDAR_MODE`. `auth-policy.cerbos` is still
 served and still on the classpath — it remains the routing source for the
 **signed-bundle** policy path (`policy_bundle.py`, which packages
 `modules/<name>.json` today) — but a module integrating only for live
-discovery must serve `auth-policy.cedar` for the ACS to route to it at all.
+discovery must serve `auth-policy.cerbos` for the ACS to route to it at all.
 The `--module` name must equal the module's gateway path prefix (e.g.
-`payment-gateway`), because it is baked into the Cedar resource ids.
+`payment-gateway`), because it is baked into the Cerbos resource ids.
 
-The **Tier-2 domain** set (`auth-policy-domain.cedar`, from
-`--cedar-domain-output`) is **not** served over the well-known endpoint — it is
+The **Tier-2 domain** set (`auth-policy-domain.cerbos`, from
+`--cerbos-domain-output`) is **not** served over the well-known endpoint — it is
 consumed only in-process by this module's `@Authorize` PEP from the classpath
-(`labs64.auth.cedar.policy-location`, default `classpath:auth-policy-domain.cedar`).
+(`labs64.auth.cerbos.policy-location`, default `classpath:auth-policy-domain.cerbos`).
 Both files are generated from the one `x-labs64-auth` source, so traefik and the
 module enforce the same OpenAPI-derived contract.
 
@@ -439,7 +439,7 @@ paths:
 
 ### Generated outputs
 
-**auth-policy.cedar** (signed-bundle routing source):
+**auth-policy.cerbos** (signed-bundle routing source):
 ```json
 {
   "version": 1,
@@ -454,7 +454,7 @@ paths:
 }
 ```
 
-**auth-policy.cedar** (live-discovery routing + decision source — same fields, as annotations):
+**auth-policy.cerbos** (live-discovery routing + decision source — same fields, as annotations):
 ```
 @id("auditflow::publishEvent")
 @path("/audit/publish")
@@ -511,21 +511,21 @@ Ensure `auth-context-spring-boot-starter` is on the classpath and `labs64.auth-c
 
 ## Reading @Authorize enforcement logs
 
-Each `@Authorize` decision emits a non-sensitive summary on `io.labs64.authcontext.cedar.LoggingDecisionListener`:
+Each `@Authorize` decision emits a non-sensitive summary on `io.labs64.authcontext.cerbos.LoggingDecisionListener`:
 
 ```
-cedar-domain outcome=<enforced|shadow>-<allow|deny> decision=<allow|deny|error> \
+cerbos-domain outcome=<enforced|shadow>-<allow|deny> decision=<allow|deny|error> \
   mode=<enforce|shadow> action=<a> resourceType=<t> reasons=<policyIds|-> requestId=<id>
 ```
 
 INFO for a clean allow, WARN for deny/error.
 
-Sensitive fields (user, tenant, resolved resource id, raw error) ride the dedicated `io.labs64.authcontext.cedar.detail` logger at DEBUG, off by default. Enable it during the Cedar testing phase, e.g. in `application.yaml`:
+Sensitive fields (user, tenant, resolved resource id, raw error) ride the dedicated `io.labs64.authcontext.cerbos.detail` logger at DEBUG, off by default. Enable it during the Cerbos testing phase, e.g. in `application.yaml`:
 
 ```yaml
 logging:
   level:
-    io.labs64.authcontext.cedar.detail: DEBUG
+    io.labs64.authcontext.cerbos.detail: DEBUG
 ```
 
-The detail line emits `cedar-detail requestId=<id> user=<user> tenant=<tenant> resource=<type>::<id>[ error=<err>]`, shareable with the summary for joining via `requestId`.
+The detail line emits `cerbos-detail requestId=<id> user=<user> tenant=<tenant> resource=<type>::<id>[ error=<err>]`, shareable with the summary for joining via `requestId`.
