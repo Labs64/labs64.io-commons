@@ -29,7 +29,7 @@ jobs:
 
       - name: Authenticated GET on repo roots
         run: |
-          for r in maven-releases maven-snapshots maven-public; do
+          for r in labs64.io-releases labs64.io-snapshots labs64.io-group; do
             code=$(curl -s -o /dev/null -w "%{http_code}" -u "$NEXUS_USER:$NEXUS_PASS" \
               "https://nexus.labs64.com/repository/$r/")
             echo "repository/$r/ -> HTTP $code"
@@ -70,7 +70,7 @@ jobs:
             -DgroupId=io.labs64.citest -DartifactId=nexus-diagnostics \
             -Dversion=0.0.1-SNAPSHOT -Dpackaging=txt -Dfile=diag.txt \
             -DrepositoryId=labs64-nexus-snapshots \
-            -Durl=https://nexus.labs64.com/repository/maven-snapshots/ \
+            -Durl=https://nexus.labs64.com/repository/labs64.io-snapshots/ \
             && echo "SNAPSHOT DEPLOY: OK" || echo "SNAPSHOT DEPLOY: FAILED"
 
       - name: Test deploy to maven-releases
@@ -80,5 +80,5 @@ jobs:
             -DgroupId=io.labs64.citest -DartifactId=nexus-diagnostics \
             -Dversion=${{ github.run_number }}.0.0 -Dpackaging=txt -Dfile=diag.txt \
             -DrepositoryId=labs64-nexus \
-            -Durl=https://nexus.labs64.com/repository/maven-releases/ \
+            -Durl=https://nexus.labs64.com/repository/labs64.io-releases/ \
             && echo "RELEASE DEPLOY: OK" || echo "RELEASE DEPLOY: FAILED"
