@@ -1,0 +1,84 @@
+# .github/workflows/labs64io-nexus-diagnostics.yml
+name: Labs64.IO - Nexus Diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    env:
+      NEXUS_USER: ${{ secrets.L64_PUB_CI_USERNAME }}
+      NEXUS_PASS: ${{ secrets.L64_PUB_CI_PASSWORD }}
+    steps:
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - name: List repositories visible to CI user
+        run: |
+          echo "== /service/rest/v1/repositories =="
+          curl -sf -u "$NEXUS_USER:$NEXUS_PASS" \
+            https://nexus.labs64.com/service/rest/v1/repositories \
+            | python3 -m json.tool || echo "REPO LIST FAILED"
+
+      - name: Authenticated GET on repo roots
+        run: |
+          for r in maven-releases maven-snapshots maven-public; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -u "$NEXUS_USER:$NEXUS_PASS" \
+              "https://nexus.labs64.com/repository/$r/")
+            echo "repository/$r/ -> HTTP $code"
+          done
+
+      - name: Search io.labs64 artifacts (authenticated)
+        run: |
+          curl -sf -u "$NEXUS_USER:$NEXUS_PASS" \
+            "https://nexus.labs64.com/service/rest/v1/search?group=io.labs64" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); [print(i['repository'], i['name'], i['version']) for i in d['items']] or print('NO io.labs64 ARTIFACTS FOUND')" \
+            || echo "SEARCH FAILED"
+
+      - name: Prepare Maven settings.xml
+        run: |
+          mkdir -p ~/.m2
+          cat > ~/.m2/settings.xml <<'EOF'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+            <servers>
+              <server>
+                <id>labs64-nexus</id>
+                <username>${env.NEXUS_USER}</username>
+                <password>${env.NEXUS_PASS}</password>
+              </server>
+              <server>
+                <id>labs64-nexus-snapshots</id>
+                <username>${env.NEXUS_USER}</username>
+                <password>${env.NEXUS_PASS}</password>
+              </server>
+            </servers>
+          </settings>
+          EOF
+
+      - name: Test deploy to maven-snapshots
+        run: |
+          mkdir -p /tmp/diag && cd /tmp/diag
+          cat > diag.txt <<< "nexus diagnostics test artifact"
+          mvn -B -ntp -s ~/.m2/settings.xml deploy:deploy-file \
+            -DgroupId=io.labs64.citest -DartifactId=nexus-diagnostics \
+            -Dversion=0.0.1-SNAPSHOT -Dpackaging=txt -Dfile=diag.txt \
+            -DrepositoryId=labs64-nexus-snapshots \
+            -Durl=https://nexus.labs64.com/repository/maven-snapshots/ \
+            && echo "SNAPSHOT DEPLOY: OK" || echo "SNAPSHOT DEPLOY: FAILED"
+
+      - name: Test deploy to maven-releases
+        run: |
+          cd /tmp/diag
+          mvn -B -ntp -s ~/.m2/settings.xml deploy:deploy-file \
+            -DgroupId=io.labs64.citest -DartifactId=nexus-diagnostics \
+            -Dversion=${{ github.run_number }}.0.0 -Dpackaging=txt -Dfile=diag.txt \
+            -DrepositoryId=labs64-nexus \
+            -Durl=https://nexus.labs64.com/repository/maven-releases/ \
+            && echo "RELEASE DEPLOY: OK" || echo "RELEASE DEPLOY: FAILED"
