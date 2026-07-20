@@ -38,7 +38,12 @@ jobs:
     uses: Labs64/labs64.io-workspace/.github/workflows/python-ci.yml@master
     with:
       working-directory: auth-context-python
-      install-command: pip install -q -e ".[dev]"
+      # Unquoted on purpose: the reusable python-ci.yml expands this value via
+      # an unquoted $INSTALL_CMD in bash, so literal quote characters here
+      # would survive into pip's argv (pip then sees '".[dev]"' verbatim and
+      # rejects it). `.[dev]` needs no quoting -- no single-letter d/e/v file
+      # exists in auth-context-python/ for the shell to glob-match instead.
+      install-command: pip install -q -e .[dev]
       test-command: pytest -q
 
   # Cerbos policy generation from x-labs64-auth + compile + truth-table gate
