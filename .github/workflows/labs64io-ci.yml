@@ -55,6 +55,8 @@ jobs:
   snapshot-auth-context:
     needs: [auth-context, openapi-starter, authz-queryplan, python, cerbos]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
     uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
     with:
       working-directory: auth-context-java
@@ -64,6 +66,8 @@ jobs:
   snapshot-openapi-starter:
     needs: [auth-context, openapi-starter, authz-queryplan, python, cerbos]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
     uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
     with:
       working-directory: openapi-spring-boot-starter
@@ -75,6 +79,8 @@ jobs:
   snapshot-authz-queryplan:
     needs: [snapshot-auth-context]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
     uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
     with:
       working-directory: authz-queryplan-jpa
