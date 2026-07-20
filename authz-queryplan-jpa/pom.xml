@@ -21,18 +21,21 @@
         <!-- Library targets 17 so every ecosystem service (Java >= 17) can consume it -->
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Points at the latest RELEASED auth-context. A dev may temporarily point
+             this at the current -SNAPSHOT when unreleased features are needed. -->
+        <auth-context.version>0.4.0</auth-context.version>
     </properties>
 
     <distributionManagement>
         <repository>
             <id>labs64-nexus</id>
             <name>Labs64 Nexus Releases</name>
-            <url>https://nexus.labs64.com/repository/maven-releases/</url>
+            <url>https://nexus.labs64.com/repository/labs64.io-releases/</url>
         </repository>
         <snapshotRepository>
             <id>labs64-nexus-snapshots</id>
             <name>Labs64 Nexus Snapshots</name>
-            <url>https://nexus.labs64.com/repository/maven-snapshots/</url>
+            <url>https://nexus.labs64.com/repository/labs64.io-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
@@ -41,7 +44,7 @@
         <dependency>
             <groupId>io.labs64</groupId>
             <artifactId>auth-context-spring-boot-starter</artifactId>
-            <version>0.4.0</version>
+            <version>${auth-context.version}</version>
         </dependency>
         <!-- JPA + Spring Data provided by the consuming service at runtime -->
         <dependency>
@@ -71,4 +74,75 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.2.1</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.3.2</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.8.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>ossrh</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>published</waitUntil>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

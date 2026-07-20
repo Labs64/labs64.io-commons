@@ -15,43 +15,68 @@ permissions:
   contents: read
 
 jobs:
-  java:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: maven
-      - name: Test auth-context-java
-        run: cd auth-context-java && mvn -B -ntp test
-      - name: Install auth-context-java (dependency for authz-queryplan-jpa)
-        run: cd auth-context-java && mvn -B -ntp -DskipTests install
-      - name: Test openapi-spring-boot-starter
-        run: cd openapi-spring-boot-starter && mvn -B -ntp test
-      - name: Test authz-queryplan-jpa
-        run: cd authz-queryplan-jpa && mvn -B -ntp test
+  auth-context:
+    uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    with:
+      working-directory: auth-context-java
+      maven-goals: test
+
+  openapi-starter:
+    uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    with:
+      working-directory: openapi-spring-boot-starter
+      maven-goals: test
+
+  authz-queryplan:
+    uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    with:
+      working-directory: authz-queryplan-jpa
+      pre-install-dirs: auth-context-java
+      maven-goals: test
 
   python:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - name: Test auth-context-python
-        run: |
-          cd auth-context-python
-          pip install -q -e ".[dev]"
-          pytest -q
+    uses: Labs64/labs64.io-workspace/.github/workflows/python-ci.yml@master
+    with:
+      working-directory: auth-context-python
+      install-command: pip install -q -e ".[dev]"
+      test-command: pytest -q
 
-  # Generate the reference Cerbos policy set
-  # from the SAME x-labs64-auth (F3, no-drift) and run cerbos compile + the
-  # truth-table suite — including the cross-tenant isolation invariant (F4/F8).
+  # Cerbos policy generation from x-labs64-auth + compile + truth-table gate
+  # (repo-specific — stays inline).
   cerbos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Cerbos compile + decision-equivalence truth-table gate
         run: ./auth-policy-cerbos/validate.sh
+
+  # ── Snapshot publishing: only after ALL tests green, only on master pushes.
+  # maven-publish skips silently when the pom version is not a -SNAPSHOT.
+  snapshot-auth-context:
+    needs: [auth-context, openapi-starter, authz-queryplan, python, cerbos]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
+    with:
+      working-directory: auth-context-java
+      mode: snapshot
+    secrets: inherit
+
+  snapshot-openapi-starter:
+    needs: [auth-context, openapi-starter, authz-queryplan, python, cerbos]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
+    with:
+      working-directory: openapi-spring-boot-starter
+      mode: snapshot
+    secrets: inherit
+
+  # needs snapshot-auth-context so a same-push snapshot of the dependency is
+  # already in Nexus if auth-context.version points at a -SNAPSHOT.
+  snapshot-authz-queryplan:
+    needs: [snapshot-auth-context]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
+    with:
+      working-directory: authz-queryplan-jpa
+      mode: snapshot
+    secrets: inherit
