@@ -118,7 +118,7 @@ jobs:
         run: |
           for m in $MODULES; do
             echo "== deploy $m $RELEASE_VERSION"
-            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release -Dgpg.pinentryMode=loopback)
+            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release -Dgpg.pinentryMode=loopback -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}")
           done
 
       # Central runs AFTER the Nexus deploy so a Central failure never loses
@@ -132,7 +132,7 @@ jobs:
         run: |
           for m in $MODULES; do
             echo "== central publish $m $RELEASE_VERSION"
-            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release,central -Dgpg.pinentryMode=loopback)
+            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release,central -Dgpg.pinentryMode=loopback -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}")
           done
 
       - name: Commit, tag, bump to next snapshot
