@@ -4,7 +4,7 @@
 
     <groupId>io.labs64</groupId>
     <artifactId>authz-queryplan-jpa</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.0.3</version>
     <packaging>jar</packaging>
 
     <name>Labs64.IO :: Authz Query-Plan (JPA)</name>
@@ -23,7 +23,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Points at the latest RELEASED auth-context. A dev may temporarily point
              this at the current -SNAPSHOT when unreleased features are needed. -->
-        <auth-context.version>0.0.1</auth-context.version>
+        <auth-context.version>0.0.3</auth-context.version>
     </properties>
 
     <distributionManagement>
