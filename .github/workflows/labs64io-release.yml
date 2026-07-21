@@ -95,6 +95,11 @@ jobs:
 
       - name: Import GPG key
         run: |
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
+          echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
+          gpgconf --kill gpg-agent
           echo "${{ secrets.GPG_KEY }}" | base64 -d | \
             gpg --batch --pinentry-mode loopback --passphrase "${{ secrets.GPG_KEY_PASS }}" --import
 
@@ -110,7 +115,7 @@ jobs:
         run: |
           for m in $MODULES; do
             echo "== deploy $m $RELEASE_VERSION"
-            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release)
+            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release -Dgpg.pinentryMode=loopback)
           done
 
       # Central runs AFTER the Nexus deploy so a Central failure never loses
@@ -124,7 +129,7 @@ jobs:
         run: |
           for m in $MODULES; do
             echo "== central publish $m $RELEASE_VERSION"
-            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release,central)
+            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release,central -Dgpg.pinentryMode=loopback)
           done
 
       - name: Commit, tag, bump to next snapshot
