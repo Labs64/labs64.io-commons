@@ -87,6 +87,12 @@ jobs:
           </settings>
           EOF
 
+      - name: Check GPG secret
+        env:
+          GPG_KEY_TMP: ${{ secrets.GPG_KEY }}
+        run: |
+          echo "$GPG_KEY_TMP" | head -c 40
+
       - name: Import GPG key
         run: |
           echo "${{ secrets.GPG_KEY }}" | base64 -d | \
