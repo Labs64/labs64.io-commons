@@ -4,7 +4,7 @@
 
     <groupId>io.labs64</groupId>
     <artifactId>auth-context-spring-boot-starter</artifactId>
-    <version>0.4.0</version>
+    <version>0.0.1</version>
     <packaging>jar</packaging>
 
     <name>Labs64.IO :: Auth Context (Spring Boot Starter)</name>
