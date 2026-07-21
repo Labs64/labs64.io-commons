@@ -4,7 +4,7 @@ name: Labs64.IO - Commons - Release
 #   auth-context-java -> openapi-spring-boot-starter -> authz-queryplan-jpa
 # Maven Central publishing (central profile, auth-context only for now) is
 # opt-in via the publish-central input ("later" per spec).
-# After deploying: commit + tag v<version>, then bump master to next -SNAPSHOT
+# After deploying: commit + tag <version>, then bump master to next -SNAPSHOT
 # (auth-context.version property in authz-queryplan-jpa stays at the release).
 
 on:
@@ -139,7 +139,7 @@ jobs:
         run: |
           git add $(for m in $MODULES; do echo "$m/pom.xml"; done)
           git commit -m "chore: release commons ${RELEASE_VERSION}"
-          git tag -a "v${RELEASE_VERSION}" -m "Release ${RELEASE_VERSION}"
+          git tag -a "${RELEASE_VERSION}" -m "Release ${RELEASE_VERSION}"
           if [[ -z "$NEXT_VERSION" ]]; then
             IFS=. read -r MA MI PA <<< "$RELEASE_VERSION"
             NEXT_VERSION="${MA}.$((MI+1)).0-SNAPSHOT"
@@ -151,4 +151,4 @@ jobs:
           git add $(for m in $MODULES; do echo "$m/pom.xml"; done)
           git commit -m "chore: start ${NEXT_VERSION}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
-          git push origin "v${RELEASE_VERSION}"
+          git push origin "${RELEASE_VERSION}"
