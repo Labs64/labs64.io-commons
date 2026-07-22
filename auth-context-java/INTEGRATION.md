@@ -342,7 +342,7 @@ labs64:
 Services **no longer serve** authorization policies at runtime (the `/.well-known/auth-policy` endpoints have been deleted). Instead, the generated Cerbos policies and route manifests are collected from the build artifacts (`target/cerbos`) and distributed to the Central PDP via a GitOps CI pipeline. 
 
 1. **Build Time**: The OpenAPI preprocessor emits Cerbos YAML policies (`<module>_api.yaml` and `<DomainResource>.yaml`) and a `routes.yaml` manifest.
-2. **CI Pipeline**: A shared script (`build-cerbos-policies.sh`) aggregates the `target/cerbos` directories from all modules into a centralized policy distribution format.
+2. **CI Pipeline**: A shared script (`build-authz-policies.sh`) aggregates the `target/cerbos` directories from all modules into a centralized policy distribution format.
 3. **Runtime**: The central Cerbos PDP loads these generated policies from a mounted ConfigMap. The Traefik Authproxy loads the `routes.yaml` manifests to understand the path-to-operation mappings.
 4. **Enforcement**: When a request arrives, the Traefik Authproxy queries the central Cerbos PDP for edge reachability (Tier 1). Then, inside your module, the `@Authorize` interceptors from `auth-context-spring-boot-starter` query the central Cerbos PDP for fine-grained domain authorization (Tier 2).
 
