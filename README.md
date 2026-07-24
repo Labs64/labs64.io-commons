@@ -84,3 +84,7 @@ mvn -q exec:java \
 
 - Centralized authentication & authorization gateway (`labs64.io-authproxy/traefik-authproxy`)
 - [`labs64.io-authproxy`](https://github.com/Labs64/labs64.io-authproxy) — traefik-authproxy, the header contract's producer
+
+## License
+
+The core of the *Labs64.IO Ecosystem* is entirely open source and free forever. Community modules are licensed under [Apache License 2.0](LICENSE).
