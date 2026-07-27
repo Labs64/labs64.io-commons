@@ -7,6 +7,9 @@ default:
 # build + test all libraries
 build: java install-java openapi queryplan python
 
+# test all libraries
+test: java openapi queryplan python
+
 # build + test the Java starter
 java:
     cd auth-context-java && mvn -B -ntp clean test

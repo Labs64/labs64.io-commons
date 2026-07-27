@@ -6,6 +6,19 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      release-auth-context-version:
+        required: false
+        type: string
+        description: "Release auth-context-spring-boot-starter at this version (X.Y.Z). Leave blank to skip."
+      release-openapi-starter-version:
+        required: false
+        type: string
+        description: "Release openapi-spring-boot-starter at this version (X.Y.Z). Leave blank to skip."
+      release-authz-queryplan-version:
+        required: false
+        type: string
+        description: "Release authz-queryplan-jpa at this version (X.Y.Z). Leave blank to skip."
 
 concurrency:
   group: commons-ci-${{ github.ref }}
@@ -90,4 +103,49 @@ jobs:
     with:
       working-directory: authz-queryplan-jpa
       mode: snapshot
+    secrets: inherit
+
+  # ── Release publishing: manual only (workflow_dispatch), one input per
+  # library so they can be released independently or together. Each does
+  # versions:set -> GPG-signed deploy -> tag -> bump back to the next
+  # -SNAPSHOT (see maven-publish.yml's mode: release). Leaving an input blank
+  # skips that library entirely (maven-publish.yml is only invoked when its
+  # own version input is non-empty).
+  #
+  # authz-queryplan-jpa pins its OWN auth-context.version property to the
+  # latest RELEASED auth-context (see the property's comment in its pom.xml) —
+  # after releasing auth-context-java, bump that property to the new version
+  # in a follow-up commit before releasing authz-queryplan-jpa, so it does not
+  # keep building against a now-superseded release.
+  release-auth-context:
+    if: github.event_name == 'workflow_dispatch' && inputs.release-auth-context-version != ''
+    permissions:
+      contents: write
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
+    with:
+      working-directory: auth-context-java
+      mode: release
+      version: ${{ inputs.release-auth-context-version }}
+    secrets: inherit
+
+  release-openapi-starter:
+    if: github.event_name == 'workflow_dispatch' && inputs.release-openapi-starter-version != ''
+    permissions:
+      contents: write
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
+    with:
+      working-directory: openapi-spring-boot-starter
+      mode: release
+      version: ${{ inputs.release-openapi-starter-version }}
+    secrets: inherit
+
+  release-authz-queryplan:
+    if: github.event_name == 'workflow_dispatch' && inputs.release-authz-queryplan-version != ''
+    permissions:
+      contents: write
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@master
+    with:
+      working-directory: authz-queryplan-jpa
+      mode: release
+      version: ${{ inputs.release-authz-queryplan-version }}
     secrets: inherit

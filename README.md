@@ -21,13 +21,22 @@ Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Sc
 
 **Java:**
 
-Published to Labs64 Nexus. Ensure your `settings.xml` or CI environment is configured to resolve from the Labs64 Maven repositories.
+Published to Labs64 Nexus (snapshots and releases both). Ensure your `settings.xml` or CI
+environment is configured to resolve from the Labs64 Maven repositories.
+
+**Current status: pre-release.** Every Java library here is still on its first development line
+(`0.1.0-SNAPSHOT`) — no `0.1.0` (or any other) stable version has been cut yet, and every current
+ecosystem consumer (`labs64.io-auditflow`, `labs64.io-checkout`, `labs64.io-payment-gateway`)
+depends on the snapshot for exactly that reason. A snapshot is a moving target — Nexus lets it be
+overwritten at any time — so no downstream service should stay pinned to one longer than
+necessary. See [Release process](#release-process) below for cutting the first stable release and
+[Where each library actually is](#where-each-library-actually-is) for what changes once one exists.
 
 ```xml
 <dependency>
     <groupId>io.labs64</groupId>
     <artifactId>auth-context-spring-boot-starter</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -46,7 +55,47 @@ just openapi # OpenAPI starter only
 just python  # Python only
 ```
 
-Local Java consumption: `just install-java` installs `0.1.0` into the local Maven repository.
+Local Java consumption: `just install-java` installs `0.1.0-SNAPSHOT` into the local Maven repository.
+
+## Release process
+
+`.github/workflows/labs64io-ci.yml` publishes both automatically and on demand, via the shared
+`maven-publish.yml` reusable workflow (`labs64.io-workspace`):
+
+- **Snapshot — automatic.** Every push to `master` deploys the current `-SNAPSHOT` for
+  `auth-context-java` and `openapi-spring-boot-starter` to the Nexus snapshot repository (silently
+  skipped if the pom version is not a `-SNAPSHOT` — a release version is never accidentally
+  re-pushed there). `authz-queryplan-jpa` follows once `auth-context`'s snapshot publish
+  completes.
+- **Release — manual, `workflow_dispatch` only.** Trigger `labs64io-ci.yml` from the Actions tab
+  and fill in whichever of `release-auth-context-version` / `release-openapi-starter-version` /
+  `release-authz-queryplan-version` you're cutting (`X.Y.Z`; leave the others blank to skip them).
+  Each does, for that one library: `versions:set` to the given version, a GPG-signed deploy to the
+  Nexus release repository, a commit + git tag, then a bump back to the next `-SNAPSHOT` — pushed
+  straight to `master`.
+
+  `authz-queryplan-jpa` pins its *own* dependency on auth-context at the **latest released**
+  version (`<auth-context.version>` in its `pom.xml`), deliberately never the in-repo snapshot —
+  see that property's comment. After releasing `auth-context-java`, bump that property to the new
+  version in a follow-up commit before releasing `authz-queryplan-jpa`, so it isn't left building
+  against a now-superseded release.
+
+Requires repository secrets `L64_PUB_CI_USERNAME` / `L64_PUB_CI_PASSWORD` (Nexus) and `GPG_KEY` /
+`GPG_KEY_PASS` (release signing) — already configured for this repository's snapshot publishing to
+work at all.
+
+### Where each library actually is
+
+| Library | Released? | Consumers currently pin |
+|---|---|---|
+| `auth-context-spring-boot-starter` | Not yet | `0.1.0-SNAPSHOT` (auditflow-be, checkout-be, payment-gateway-be) |
+| `openapi-spring-boot-starter` | Not yet | `0.1.0-SNAPSHOT` (via `${labs64-openapi.version}`) |
+| `authz-queryplan-jpa` | Not yet (last real release: `0.0.3`, tagged) | `0.1.0-SNAPSHOT` (checkout-be) |
+| `auth-context-python` | git-ref install only, no package index | — |
+
+Once a Java library's first stable release is cut, update every consumer's pinned version away
+from the snapshot in the same change — a released library with a downstream still pinned to its
+snapshot is the exact state this section exists to avoid recreating.
 
 ## OpenAPI Auth Policy Generation
 

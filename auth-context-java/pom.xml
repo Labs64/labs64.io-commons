@@ -85,10 +85,23 @@
             <artifactId>protobuf-java</artifactId>
             <version>4.34.2</version>
         </dependency>
-        <!-- Test support (@WithAuthContext) ships in the main jar; JUnit stays optional for consumers -->
+        <!-- Test support (@WithAuthContext, AuthEnforcementContract, ModulePepHarness) ships in the
+             main jar; the test-only libraries it needs stay optional so consumers never inherit them -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
