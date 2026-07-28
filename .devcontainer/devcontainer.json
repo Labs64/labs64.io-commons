@@ -1,0 +1,28 @@
+{
+  "name": "Labs64.IO Commons",
+  "dockerComposeFile": "compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspaces/labs64.io-commons",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "l64user",
+  "updateRemoteUserUID": false,
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.13"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:3": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "vscjava.vscode-java-pack",
+        "vmware.vscode-boot-dev-pack",
+        "ms-python.python",
+        "redhat.vscode-yaml",
+        "ms-azuretools.vscode-docker",
+        "vscode-just.runRecipe"
+      ]
+    }
+  },
+  "postCreateCommand": "java -version && mvn -version && python3 --version && just --version && docker --version"
+}
