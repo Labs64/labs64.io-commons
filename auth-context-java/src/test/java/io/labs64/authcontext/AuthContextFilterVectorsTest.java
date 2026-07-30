@@ -1,6 +1,7 @@
 package io.labs64.authcontext;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import java.io.InputStream;
 import java.util.HashSet;
@@ -31,15 +32,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 class AuthContextFilterVectorsTest {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String PROTECTED_PATH = "/customers";
     private static final String PUBLIC_PATH = "/v3/api-docs";
 
     @TestFactory
     Stream<DynamicTest> vectors() throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
         JsonNode root;
         try (InputStream in = getClass().getResourceAsStream("/test-vectors/auth-context-vectors.json")) {
-            root = mapper.readTree(in);
+            root = MAPPER.readTree(in);
         }
         List<JsonNode> cases = root.get("cases").findParents("name");
         return cases.stream().map(vector -> DynamicTest.dynamicTest(vector.get("name").asText(), () -> run(vector)));
@@ -72,6 +73,13 @@ class AuthContextFilterVectorsTest {
         case "reject" -> {
             assertThat(response.getStatus()).isEqualTo(401);
             assertThat(chainCalled.get()).isFalse();
+            JsonNode body = MAPPER.readTree(response.getContentAsString());
+            assertThat(body.fieldNames()).toIterable()
+                    .containsExactlyInAnyOrder("code", "message", "timestamp");
+            assertThat(body.get("code").asText()).isEqualTo(expect.get("error").get("code").asText());
+            assertThat(body.get("message").asText()).isEqualTo(expect.get("error").get("message").asText());
+            assertThatCode(() -> java.time.Instant.parse(body.get("timestamp").asText()))
+                    .doesNotThrowAnyException();
         }
         case "anonymous" -> {
             assertThat(response.getStatus()).isNotEqualTo(401);

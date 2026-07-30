@@ -18,6 +18,7 @@ import org.springframework.web.servlet.HandlerMapping;
 import io.labs64.authcontext.authorization.AuthAnnotationSupport;
 import io.labs64.authcontext.core.AuthContext;
 import io.labs64.authcontext.core.AuthContextHolder;
+import io.labs64.authcontext.web.AuthErrorResponseWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -67,7 +68,7 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
             if (service.isEnforcing()) {
                 logger.warn("authz-domain outcome=enforced-deny decision=deny mode=enforce "
                         + "action={} reason=no-auth-context requestId=-", annotation.action());
-                response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                AuthErrorResponseWriter.unauthorized(response);
                 return false;
             }
             logger.warn("authz-domain outcome=shadow-deny decision=deny mode=shadow "
@@ -78,7 +79,7 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
         AuthorizationDecision decision = decide(annotation, request, context.get());
         publish(decision);
         if (service.isEnforcing() && !decision.allowed()) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            AuthErrorResponseWriter.forbidden(response);
             return false;
         }
         return true;

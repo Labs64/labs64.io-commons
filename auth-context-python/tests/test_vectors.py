@@ -5,6 +5,7 @@ vectors, not just one implementation.
 """
 
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -54,6 +55,11 @@ def test_vector(case):
 
     if outcome == "reject":
         assert response.status_code == 401
+        body = response.json()
+        assert set(body) == {"code", "message", "timestamp"}
+        assert body["code"] == expect["error"]["code"]
+        assert body["message"] == expect["error"]["message"]
+        datetime.fromisoformat(body["timestamp"].replace("Z", "+00:00"))
         return
 
     assert response.status_code == 200

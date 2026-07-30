@@ -84,7 +84,10 @@
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000005"
       },
-      "expect": { "outcome": "reject" }
+      "expect": {
+        "outcome": "reject",
+        "error": { "code": "UNAUTHORIZED", "message": "Unauthorized", "timestamp": "RFC3339" }
+      }
     },
     {
       "name": "empty-user-on-protected-path-rejected",
@@ -95,7 +98,10 @@
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000006"
       },
-      "expect": { "outcome": "reject" }
+      "expect": {
+        "outcome": "reject",
+        "error": { "code": "UNAUTHORIZED", "message": "Unauthorized", "timestamp": "RFC3339" }
+      }
     },
     {
       "name": "missing-user-on-public-path-anonymous",
@@ -129,7 +135,10 @@
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000008"
       },
-      "expect": { "outcome": "reject" }
+      "expect": {
+        "outcome": "reject",
+        "error": { "code": "UNAUTHORIZED", "message": "Unauthorized", "timestamp": "RFC3339" }
+      }
     },
     {
       "name": "invalid-chars-in-tenant-rejected",
@@ -140,7 +149,10 @@
         "X-Auth-Tenant": "t 100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-000000000009"
       },
-      "expect": { "outcome": "reject" }
+      "expect": {
+        "outcome": "reject",
+        "error": { "code": "UNAUTHORIZED", "message": "Unauthorized", "timestamp": "RFC3339" }
+      }
     },
     {
       "name": "invalid-scope-item-rejected",
@@ -151,7 +163,10 @@
         "X-Auth-Tenant": "t_100",
         "X-Request-ID": "0198a7b0-1111-7abc-8def-00000000000a"
       },
-      "expect": { "outcome": "reject" }
+      "expect": {
+        "outcome": "reject",
+        "error": { "code": "UNAUTHORIZED", "message": "Unauthorized", "timestamp": "RFC3339" }
+      }
     },
     {
       "name": "scopes-csv-items-are-trimmed",

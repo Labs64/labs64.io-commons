@@ -39,6 +39,11 @@ def test_current_auth_returns_bound_context():
 def test_require_scopes_forbids_missing_scope():
     response = build_client().get("/admin", headers=FULL_CONTEXT)
     assert response.status_code == 403
+    body = response.json()
+    assert body["code"] == "FORBIDDEN"
+    assert body["message"] == "Forbidden"
+    assert body["traceId"] == "req-1"
+    assert set(body) == {"code", "message", "timestamp", "traceId"}
 
 
 def test_require_scopes_any_of_matches():

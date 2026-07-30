@@ -1,7 +1,6 @@
 package io.labs64.authcontext.web;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 import io.labs64.authcontext.core.AuthContext;
 import io.labs64.authcontext.core.AuthContextHolder;
@@ -104,10 +103,7 @@ public class AuthContextFilter extends OncePerRequestFilter {
     }
 
     private void reject(HttpServletResponse response) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
-        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        response.getWriter().write("{\"status\":401,\"error\":\"Unauthorized\"}");
+        AuthErrorResponseWriter.unauthorized(response);
     }
 }
 

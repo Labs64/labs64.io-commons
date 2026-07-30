@@ -8,6 +8,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import io.labs64.authcontext.core.AuthContext;
 import io.labs64.authcontext.core.AuthContextHolder;
+import io.labs64.authcontext.web.AuthErrorResponseWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -30,11 +31,11 @@ public class RequireScopesInterceptor implements HandlerInterceptor {
 
         Optional<AuthContext> context = AuthContextHolder.get();
         if (context.isEmpty()) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            AuthErrorResponseWriter.unauthorized(response);
             return false;
         }
         if (!context.get().hasAnyScope(annotation.value())) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            AuthErrorResponseWriter.forbidden(response);
             return false;
         }
         return true;
