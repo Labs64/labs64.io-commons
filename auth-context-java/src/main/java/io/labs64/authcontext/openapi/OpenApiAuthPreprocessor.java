@@ -17,16 +17,18 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 /**
  * Generates OpenAPI generator annotations and gateway policy from
- * {@code x-labs64-auth}.
+ * standard OpenAPI {@code security} and {@code x-labs64.auth}.
  */
 public class OpenApiAuthPreprocessor {
 
-    public static final String AUTH_EXTENSION = "x-labs64-auth";
+    public static final String AUTH_EXTENSION = "x-labs64";
     public static final String EXTRA_ANNOTATION_EXTENSION = "x-operation-extra-annotation";
+    public static final String OAUTH_SCHEME = "oauth";
 
     private static final String PUBLIC_ENDPOINT = "@io.labs64.authcontext.authorization.PublicEndpoint";
     private static final String REQUIRE_TENANT = "@io.labs64.authcontext.authorization.RequireTenant";
     private static final String REQUIRE_SCOPES = "@io.labs64.authcontext.authorization.RequireScopes";
+    private static final String AUTHORIZE = "@io.labs64.authcontext.authorization.Authorize";
     private static final List<String> HTTP_METHODS = List.of("get", "put", "post", "delete", "options", "head",
             "patch", "trace");
 
@@ -60,7 +62,8 @@ public class OpenApiAuthPreprocessor {
      * ({@code policies/*.yaml} resource policies plus
      * {@code policies/_schemas/*.json} schemas), the routes manifest, and the
      * flat public-path list. OpenAPI stays the single source of truth for
-     * enforcement — the same {@code x-labs64-auth} feeds every output.
+     * enforcement — the same OpenAPI security requirements and
+     * {@code x-labs64.auth} metadata feed every output.
      *
      * @param cerbosOutputDir   base dir for {@code policies/} + {@code policies/_schemas/}; null to skip
      * @param module            module name; required when {@code cerbosOutputDir} or {@code routesOutput} is set
@@ -98,9 +101,10 @@ public class OpenApiAuthPreprocessor {
     /**
      * The public operations as {@code <METHOD> <path-template>} entries — the
      * backend {@code AuthContextFilter}'s public-path source, generated from the
-     * SAME {@code x-labs64-auth.public} as the edge/domain Cerbos so no public
-     * path is ever hand-maintained. Only OpenAPI operations appear here; non-API
-     * surfaces (actuator, docs) stay configured prefixes on the filter.
+     * same effective OpenAPI security and {@code x-labs64.auth} metadata as the
+     * generated annotations and Cerbos policies. Only OpenAPI operations appear
+     * here; non-API surfaces (actuator, docs) stay configured prefixes on the
+     * filter.
      */
     @SuppressWarnings("unchecked")
     public List<String> publicPaths(final Map<String, Object> policy) {
@@ -115,7 +119,7 @@ public class OpenApiAuthPreprocessor {
 
     private String publicPathsDocument(final Map<String, Object> policy) {
         StringBuilder doc = new StringBuilder();
-        doc.append("# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n");
+        doc.append("# GENERATED from OpenAPI security and x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n");
         doc.append("# One '<METHOD> <path-template>' per public operation; consumed by AuthContextFilter.\n");
         for (String entry : publicPaths(policy)) {
             doc.append(entry).append('\n');
@@ -175,24 +179,26 @@ public class OpenApiAuthPreprocessor {
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("apiVersion", "api.cerbos.dev/v1");
         doc.put("resourcePolicy", rp);
-        return "# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n"
+        return "# GENERATED from OpenAPI security and x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n"
                 + cerbosYamlMapper.writeValueAsString(doc);
     }
 
     /**
      * Translates the enriched policy document into Cerbos resource policies —
      * the replacement for the two legacy tiers, from the SAME
-     * {@code x-labs64-auth} so OpenAPI stays the single source of truth.
+     * OpenAPI security and {@code x-labs64.auth} so OpenAPI stays the single
+     * source of truth.
      *
      * <p>Emits one <b>edge</b> resource policy per module (kind
      * {@link #cerbosResourceKind}, one ALLOW rule per operationId, the three
-     * {@code x-labs64-auth} patterns translated to CEL 1:1: public → no
-     * condition; tenant → {@code has(principal.attr.tenant) || service role};
-     * scopes → OR-overlap on {@code principal.attr.scopes}). Additionally, for
-     * every operation declaring {@code x-labs64-auth.resource}, one <b>domain</b>
+     * requirements translated to CEL 1:1: public → no condition; tenant →
+     * {@code has(principal.attr.tenant) || service role}; OAuth scopes →
+     * OR-overlap on {@code principal.attr.scopes}). Additionally, for every
+     * operation declaring {@code x-labs64.auth.resource}, one <b>domain</b>
      * resource policy per type carrying the same ALLOW rules plus a structural
      * tenant-guard DENY (the cross-tenant isolation invariant). Returns a
-     * filename → YAML map: {@code <kind>.yaml} and {@code <module>_<Type>.yaml}.
+     * filename → YAML map: {@code <kind>.yaml} and
+     * {@code <module>_<Type>.yaml}.
      */
     @SuppressWarnings("unchecked")
     public Map<String, String> cerbosPolicies(final String module, final Map<String, Object> policy)
@@ -272,20 +278,20 @@ public class OpenApiAuthPreprocessor {
         doc.put("module", module);
         doc.put("basePath", basePath == null ? "" : basePath);
         doc.put("routes", policy.get("routes"));
-        return "# GENERATED from x-labs64-auth by OpenApiAuthPreprocessor — do not edit.\n"
+        return "# GENERATED from OpenAPI security and x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n"
                 + cerbosYamlMapper.writeValueAsString(doc);
     }
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> enrich(final Map<String, Object> openApi) {
-        Map<String, Object> defaults = (Map<String, Object>) openApi.get("x-labs64-auth-defaults");
+        Object rootSecurity = openApi.get("security");
         Map<String, Object> paths = asMap(openApi.get("paths"), "paths");
         List<Map<String, Object>> routes = new ArrayList<>();
 
         for (Map.Entry<String, Object> pathEntry : paths.entrySet()) {
             String path = pathEntry.getKey();
             Map<String, Object> pathItem = asMap(pathEntry.getValue(), "paths." + path);
-            AuthPolicy pathAuth = AuthPolicy.from(pathItem.get(AUTH_EXTENSION), false, defaults);
+            Object pathAuth = pathItem.get(AUTH_EXTENSION);
 
             for (Map.Entry<String, Object> operationEntry : pathItem.entrySet()) {
                 String method = operationEntry.getKey().toLowerCase(Locale.ROOT);
@@ -295,7 +301,13 @@ public class OpenApiAuthPreprocessor {
 
                 Map<String, Object> operation = asMap(operationEntry.getValue(), method.toUpperCase(Locale.ROOT)
                         + " " + path);
-                AuthPolicy auth = AuthPolicy.from(operation.getOrDefault(AUTH_EXTENSION, pathAuth.raw()), true, defaults);
+                Object operationAuth = operation.containsKey(AUTH_EXTENSION)
+                        ? operation.get(AUTH_EXTENSION)
+                        : pathAuth;
+                Object effectiveSecurity = operation.containsKey("security")
+                        ? operation.get("security")
+                        : rootSecurity;
+                AuthPolicy auth = AuthPolicy.from(operationAuth, effectiveSecurity);
 
                 List<String> extraAnnotations = extraAnnotations(operation.get(EXTRA_ANNOTATION_EXTENSION));
                 extraAnnotations.addAll(annotations(auth, operation.get("operationId").toString()));
@@ -323,8 +335,7 @@ public class OpenApiAuthPreprocessor {
             annotations.add(REQUIRE_SCOPES + "({" + quotedCsv(auth.scopes()) + "})");
         }
         if (auth.resourceType() != null) {
-            annotations.add("@io.labs64.authcontext.authorization.Authorize(action = \"" + operationId 
-                    + "\", resourceType = \"" + auth.resourceType() + "\")");
+            annotations.add(AUTHORIZE + "(action = \"" + operationId + "\", resourceType = \"" + auth.resourceType() + "\")");
         }
         return annotations;
     }

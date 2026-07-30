@@ -1,7 +1,6 @@
 package io.labs64.authcontext.test;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,22 +37,25 @@ class AuthEnforcementContractTest {
             info:
               title: Test
               version: 1.0.0
+            security:
+              - oauth: []
             paths:
               /audit/publish:
                 post:
                   operationId: publishEvent
-                  x-labs64-auth:
-                    tenant: true
-                    scopes:
-                      - audit-event:write
+                  security:
+                    - oauth:
+                        - audit-event:write
+                  x-labs64:
+                    auth:
+                      tenant: true
                   responses:
                     '200':
                       description: ok
               /health:
                 get:
                   operationId: health
-                  x-labs64-auth:
-                    public: true
+                  security: []
                   responses:
                     '200':
                       description: ok
@@ -89,8 +91,9 @@ class AuthEnforcementContractTest {
               /payments/{paymentId}/refunds/{index}:
                 get:
                   operationId: getRefund
-                  x-labs64-auth:
-                    tenant: true
+                  x-labs64:
+                    auth:
+                      tenant: true
                   parameters:
                     - name: paymentId
                       in: path
@@ -135,8 +138,9 @@ class AuthEnforcementContractTest {
                           type: integer
                     delete:
                       operationId: deleteTenant
-                      x-labs64-auth:
-                        tenant: true
+                      x-labs64:
+                        auth:
+                          tenant: true
                       responses:
                         '204':
                           description: ok
@@ -202,8 +206,6 @@ class AuthEnforcementContractTest {
                   /health:
                     get:
                       operationId: health
-                      x-labs64-auth:
-                        public: true
                       responses:
                         '200':
                           description: ok
@@ -215,10 +217,7 @@ class AuthEnforcementContractTest {
     }
 
     @Test
-    void anOperationWithoutAuthDeclarationFailsTheBuild() throws IOException {
-        // The preprocessor already refuses this at generate-sources; reading the
-        // same enrichment means the test layer inherits the guarantee rather than
-        // silently skipping the operation.
+    void anOperationWithoutAuthRequirementsIsPublic() throws IOException {
         String undeclared = """
                 openapi: 3.0.3
                 info:
@@ -233,9 +232,7 @@ class AuthEnforcementContractTest {
                           description: ok
                 """;
 
-        assertThatThrownBy(() -> AuthEnforcementContract.protectedOperations(spec(undeclared)))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("x-labs64-auth");
+        assertThat(AuthEnforcementContract.protectedOperations(spec(undeclared))).isEmpty();
     }
 
     @Test
@@ -260,16 +257,17 @@ class AuthEnforcementContractTest {
                   /a:
                     get:
                       operationId: a
-                      x-labs64-auth: { tenant: true }
+                      x-labs64: { auth: { tenant: true } }
                       responses: { '200': { description: ok } }
                     post:
                       operationId: b
-                      x-labs64-auth: { tenant: true }
+                      x-labs64: { auth: { tenant: true } }
                       responses: { '200': { description: ok } }
                   /c:
                     delete:
                       operationId: c
-                      x-labs64-auth: { scopes: [ 'x:write' ] }
+                      security:
+                        - oauth: [ 'x:write' ]
                       responses: { '200': { description: ok } }
                 """;
         List<String> called = new ArrayList<>();
@@ -282,14 +280,15 @@ class AuthEnforcementContractTest {
     }
 
     @Test
-    void honoursAuthDefaultsDeclaredAtSpecLevel() throws IOException {
+    void honoursGlobalSecurityDeclaredAtSpecLevel() throws IOException {
         String yaml = """
                 openapi: 3.0.3
                 info:
                   title: Test
                   version: 1.0.0
-                x-labs64-auth-defaults:
-                  tenant: true
+                security:
+                  - oauth:
+                      - payment:read
                 paths:
                   /inherited:
                     get:
@@ -299,7 +298,8 @@ class AuthEnforcementContractTest {
         List<ProtectedOperation> operations = AuthEnforcementContract.protectedOperations(spec(yaml));
 
         assertThat(operations).hasSize(1);
-        assertThat(operations.get(0).tenantRequired()).isTrue();
+        assertThat(operations.get(0).tenantRequired()).isFalse();
+        assertThat(operations.get(0).scopes()).containsExactly("payment:read");
     }
 
     @Test

@@ -1,6 +1,7 @@
 package io.labs64.authcontext;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,49 +17,58 @@ import io.labs64.authcontext.openapi.OpenApiAuthPreprocessor;
 
 class OpenApiAuthPreprocessorTest {
 
+    private static final String PUBLIC_ENDPOINT =
+            "@io.labs64.authcontext.authorization.PublicEndpoint";
+    private static final String REQUIRE_TENANT =
+            "@io.labs64.authcontext.authorization.RequireTenant";
+    private static final String REQUIRE_SCOPES =
+            "@io.labs64.authcontext.authorization.RequireScopes";
+    private static final String AUTHORIZE =
+            "@io.labs64.authcontext.authorization.Authorize";
+
     @TempDir
     Path tempDir;
 
     /**
-     * Three-pattern fixture: one {@code public} op, one
-     * {@code tenant + scopes + resource} op, one {@code scopes}-only op — the
-     * shapes the Cerbos generator must translate.
+     * Three-pattern fixture: one public operation, one
+     * tenant + OAuth scope + resource operation, and one scopes-only operation.
      */
     private Map<String, Object> openApiFixture() {
-        return map("paths", map(
-                "/payment-definitions", map(
-                        "get", map("operationId", "listPaymentDefinitions",
-                                "x-labs64-auth", map("public", true))),
-                "/payments/{id}/pay", map(
-                        "post", map("operationId", "payPayment",
-                                "x-labs64-auth", map(
-                                        "tenant", true,
-                                        "scopes", List.of("payment:pay"),
-                                        "resource", "Payment"))),
-                "/events", map(
-                        "post", map("operationId", "publishEvent",
-                                "x-labs64-auth", map(
-                                        "scopes", List.of("audit-event:write"))))));
+        return map(
+                "security", List.of(map("oauth", List.of())),
+                "paths", map(
+                        "/payment-definitions", map(
+                                "get", map(
+                                        "operationId", "listPaymentDefinitions",
+                                        "security", List.of())),
+                        "/payments/{id}/pay", map(
+                                "post", map(
+                                        "operationId", "payPayment",
+                                        "security", List.of(map("oauth", List.of("payment:pay"))),
+                                        "x-labs64", labs64Auth(true, "Payment"))),
+                        "/events", map(
+                                "post", map(
+                                        "operationId", "publishEvent",
+                                        "security", List.of(map("oauth", List.of("audit-event:write")))))));
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void addsOpenApiAnnotationsAndBuildsPolicyRoutes() {
-        Map<String, Object> openApi = map("paths", map(
-                "/payments", map(
-                        "get", map(
-                                "operationId", "listPayments",
-                                "x-operation-extra-annotation", "@org.example.Existing",
-                                "x-labs64-auth", map(
-                                        "tenant", true,
-                                        "scopes", List.of("payment:read"),
-                                        "resource", "Payment")),
-                        "post", map("operationId", "createPayment",
-                                "x-labs64-auth", map("public", true))),
-                "/health", map(
-                        "get", map(
-                                "operationId", "health",
-                                "x-labs64-auth", map("public", true)))));
+        Map<String, Object> openApi = map(
+                "security", List.of(map("oauth", List.of())),
+                "paths", map(
+                        "/payments", map(
+                                "get", map(
+                                        "operationId", "listPayments",
+                                        "security", List.of(map("oauth", List.of("payment:read"))),
+                                        "x-operation-extra-annotation", "@org.example.Existing",
+                                        "x-labs64", labs64Auth(true, "Payment")),
+                                "post", map(
+                                        "operationId", "createPayment",
+                                        "security", List.of())),
+                        "/profile", map(
+                                "get", map("operationId", "getProfile"))));
 
         Map<String, Object> policy = new OpenApiAuthPreprocessor().enrich(openApi);
 
@@ -66,18 +76,149 @@ class OpenApiAuthPreprocessorTest {
         Map<String, Object> payments = (Map<String, Object>) paths.get("/payments");
         Map<String, Object> listPayments = (Map<String, Object>) payments.get("get");
         Map<String, Object> createPayment = (Map<String, Object>) payments.get("post");
+        Map<String, Object> profile = (Map<String, Object>) paths.get("/profile");
+        Map<String, Object> getProfile = (Map<String, Object>) profile.get("get");
 
         assertThat((List<String>) listPayments.get("x-operation-extra-annotation"))
                 .containsExactly(
                         "@org.example.Existing",
-                        "@io.labs64.authcontext.authorization.RequireTenant",
-                        "@io.labs64.authcontext.authorization.RequireScopes({\"payment:read\"})",
-                        "@io.labs64.authcontext.authorization.Authorize(action = \"listPayments\", resourceType = \"Payment\")");
+                        REQUIRE_TENANT,
+                        REQUIRE_SCOPES + "({\"payment:read\"})",
+                        AUTHORIZE + "(action = \"listPayments\", resourceType = \"Payment\")");
         assertThat((List<String>) createPayment.get("x-operation-extra-annotation"))
-                .containsExactly("@io.labs64.authcontext.authorization.PublicEndpoint");
+                .containsExactly(PUBLIC_ENDPOINT);
+        // oauth: [] requires authentication even though it generates no coarse
+        // authorization annotation.
+        assertThat((List<String>) getProfile.get("x-operation-extra-annotation")).isEmpty();
         assertThat((List<Map<String, Object>>) policy.get("routes"))
                 .extracting(route -> route.get("operationId"))
-                .containsExactlyInAnyOrder("listPayments", "createPayment", "health");
+                .containsExactlyInAnyOrder("listPayments", "createPayment", "getProfile");
+        assertThat((List<Map<String, Object>>) policy.get("routes"))
+                .filteredOn(route -> "getProfile".equals(route.get("operationId")))
+                .singleElement()
+                .extracting(route -> route.get("public"))
+                .isEqualTo(false);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unrelatedExtraAnnotationDoesNotPreventPublicInference() {
+        Map<String, Object> openApi = map("paths", map(
+                "/health", map("get", map(
+                        "operationId", "health",
+                        "x-operation-extra-annotation", "@org.example.Existing"))));
+
+        new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> paths = (Map<String, Object>) openApi.get("paths");
+        Map<String, Object> health = (Map<String, Object>) paths.get("/health");
+        Map<String, Object> getHealth = (Map<String, Object>) health.get("get");
+        assertThat((List<String>) getHealth.get("x-operation-extra-annotation"))
+                .containsExactly("@org.example.Existing", PUBLIC_ENDPOINT);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unrelatedSecuritySchemeDoesNotCountAsRequiredOauth() {
+        Map<String, Object> openApi = map("paths", map(
+                "/health", map("get", map(
+                        "operationId", "health",
+                        "security", List.of(map("apiKey", List.of()))))));
+
+        Map<String, Object> policy = new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) openApi.get("paths")).get("/health")).get("get");
+        assertThat((List<String>) operation.get("x-operation-extra-annotation"))
+                .containsExactly(PUBLIC_ENDPOINT);
+        assertThat((List<Map<String, Object>>) policy.get("routes"))
+                .singleElement()
+                .extracting(route -> route.get("public"))
+                .isEqualTo(true);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void operationSecurityOverridesGlobalSecurity() {
+        Map<String, Object> openApi = map(
+                "security", List.of(map("oauth", List.of("global:read"))),
+                "paths", map(
+                        "/inherited", map("get", map("operationId", "inherited")),
+                        "/public", map("get", map("operationId", "publicOperation", "security", List.of()))));
+
+        new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> paths = (Map<String, Object>) openApi.get("paths");
+        Map<String, Object> inherited = (Map<String, Object>) ((Map<String, Object>) paths.get("/inherited"))
+                .get("get");
+        Map<String, Object> publicOperation = (Map<String, Object>) ((Map<String, Object>) paths.get("/public"))
+                .get("get");
+        assertThat((List<String>) inherited.get("x-operation-extra-annotation"))
+                .containsExactly(REQUIRE_SCOPES + "({\"global:read\"})");
+        assertThat((List<String>) publicOperation.get("x-operation-extra-annotation"))
+                .containsExactly(PUBLIC_ENDPOINT);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void tenantRequirementProtectsOperationWithEmptySecurity() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments", map("get", map(
+                        "operationId", "listPayments",
+                        "security", List.of(),
+                        "x-labs64", labs64Auth(true, null)))));
+
+        new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) openApi.get("paths")).get("/payments")).get("get");
+        assertThat((List<String>) operation.get("x-operation-extra-annotation"))
+                .containsExactly(REQUIRE_TENANT);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void resourceDoesNotImplicitlyRequireTenant() {
+        Map<String, Object> openApi = map("paths", map(
+                "/catalog/{id}", map("get", map(
+                        "operationId", "getCatalogItem",
+                        "x-labs64", labs64Auth(false, "CatalogItem")))));
+
+        new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) openApi.get("paths")).get("/catalog/{id}")).get("get");
+        assertThat((List<String>) operation.get("x-operation-extra-annotation"))
+                .containsExactly("@io.labs64.authcontext.authorization.Authorize(action = \"getCatalogItem\", "
+                        + "resourceType = \"CatalogItem\")");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void anonymousSecurityAlternativeMakesOperationPublic() {
+        Map<String, Object> openApi = map("paths", map(
+                "/catalog", map("get", map(
+                        "operationId", "catalog",
+                        "security", List.of(map(), map("oauth", List.of("catalog:read")))))));
+
+        new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) openApi.get("paths")).get("/catalog")).get("get");
+        assertThat((List<String>) operation.get("x-operation-extra-annotation"))
+                .containsExactly(PUBLIC_ENDPOINT);
+    }
+
+    @Test
+    void rejectsMalformedSecurityRequirement() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments", map("get", map(
+                        "operationId", "listPayments",
+                        "security", map("oauth", List.of("payment:read"))))));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
+                .withMessageContaining("security must be an array");
     }
 
     @Test
@@ -95,10 +236,7 @@ class OpenApiAuthPreprocessorTest {
         String edge = files.get("payment_gateway_api.yaml");
 
         assertThat(edge).contains("resource: payment_gateway_api");
-        // public op: an ALLOW action listed by operationId
         assertThat(edge).contains("- listPaymentDefinitions");
-        // scope OR-check + tenant/service exemption for the protected op (fragments
-        // asserted without embedded quotes so they survive YAML scalar escaping)
         assertThat(edge).contains("request.principal.attr.scopes.exists(s, s ==");
         assertThat(edge).contains("has(request.principal.attr.tenant)");
         assertThat(edge).contains("in request.principal.roles)");
@@ -118,7 +256,6 @@ class OpenApiAuthPreprocessorTest {
                 "has(request.resource.attr.tenant) && (!has(request.principal.attr.tenant) "
                         + "|| request.resource.attr.tenant != request.principal.attr.tenant)");
         assertThat(domain).contains("cerbos:///principal.json");
-        // op without a resource declaration gets no domain policy
         assertThat(files).doesNotContainKey("payment-gateway_.yaml");
     }
 
@@ -147,15 +284,19 @@ class OpenApiAuthPreprocessorTest {
         Path input = tempDir.resolve("openapi.yaml");
         Files.writeString(input, """
                 openapi: 3.0.3
+                security:
+                  - oauth: []
                 paths:
                   /payments/{id}/pay:
                     post:
                       operationId: payPayment
-                      x-labs64-auth:
-                        tenant: true
-                        scopes:
-                          - payment:pay
-                        resource: Payment
+                      security:
+                        - oauth:
+                            - payment:pay
+                      x-labs64:
+                        auth:
+                          tenant: true
+                          resource: Payment
                 """);
         Path cerbosDir = tempDir.resolve("cerbos");
         Path routes = tempDir.resolve("payment-gateway.routes.yaml");
@@ -173,19 +314,19 @@ class OpenApiAuthPreprocessorTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void publicPathsListsOnlyPublicOperationsWithMethod() {
-        Map<String, Object> openApi = map("paths", map(
-                "/payment-definitions", map(
-                        "get", map("operationId", "listPaymentDefinitions",
-                                "x-labs64-auth", map("public", true))),
-                "/providers/{provider}/webhooks", map(
-                        "post", map("operationId", "handleProviderWebhook",
-                                "x-labs64-auth", map("public", true))),
-                "/payments", map(
-                        "get", map("operationId", "listPayments",
-                                "x-labs64-auth", map("tenant", true,
-                                        "scopes", List.of("payment:read"))))));
+        Map<String, Object> openApi = map(
+                "security", List.of(map("oauth", List.of())),
+                "paths", map(
+                        "/payment-definitions", map(
+                                "get", map("operationId", "listPaymentDefinitions", "security", List.of())),
+                        "/providers/{provider}/webhooks", map(
+                                "post", map("operationId", "handleProviderWebhook", "security", List.of())),
+                        "/payments", map(
+                                "get", map(
+                                        "operationId", "listPayments",
+                                        "security", List.of(map("oauth", List.of("payment:read"))),
+                                        "x-labs64", labs64Auth(true, null)))));
 
         OpenApiAuthPreprocessor preprocessor = new OpenApiAuthPreprocessor();
         List<String> publicPaths = preprocessor.publicPaths(preprocessor.enrich(openApi));
@@ -200,19 +341,22 @@ class OpenApiAuthPreprocessorTest {
         Path input = tempDir.resolve("openapi.yaml");
         Files.writeString(input, """
                 openapi: 3.0.3
+                security:
+                  - oauth: []
                 paths:
                   /payment-definitions:
                     get:
                       operationId: listPaymentDefinitions
-                      x-labs64-auth:
-                        public: true
+                      security: []
                   /payments:
                     get:
                       operationId: listPayments
-                      x-labs64-auth:
-                        tenant: true
-                        scopes:
-                          - payment:read
+                      security:
+                        - oauth:
+                            - payment:read
+                      x-labs64:
+                        auth:
+                          tenant: true
                 """);
         Path publicPathsOutput = tempDir.resolve("auth-public-paths");
 
@@ -222,79 +366,28 @@ class OpenApiAuthPreprocessorTest {
         String content = Files.readString(publicPathsOutput);
         assertThat(content).contains("GET /payment-definitions");
         assertThat(content).doesNotContain("/payments");
-        assertThat(content).startsWith("#");
+        assertThat(content).startsWith("# GENERATED from OpenAPI security and x-labs64.auth");
     }
 
     @Test
-    void throwsExceptionWhenNoAuthDetailsProvided() {
+    void operationWithoutAuthRequirementsIsPublic() {
         Map<String, Object> openApi = map("paths", map(
-                "/health", map(
-                        "get", map(
-                                "operationId", "health"))));
-
-        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
-                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
-                .withMessageContaining("must declare either 'public: true' or specify 'tenant'/'scopes'");
-    }
-
-    @Test
-    void throwsExceptionWhenDomainResourceDeclaredWithoutTenant() {
-        Map<String, Object> openApi = map("paths", map(
-                "/payments", map(
-                        "post", map(
-                                "operationId", "createPayment",
-                                "x-labs64-auth", map(
-                                        "scopes", List.of("payment:write"),
-                                        "resource", "Payment")))));
-
-        org.assertj.core.api.Assertions.assertThatIllegalArgumentException()
-                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
-                .withMessageContaining("must require a tenant when declaring a domain resource");
-    }
-
-    @Test
-    @SuppressWarnings("unchecked")
-    void defaultsAreAppliedToOperationsWithoutAuth() {
-        Map<String, Object> openApi = map(
-                "x-labs64-auth-defaults", map("tenant", true),
-                "paths", map(
-                        "/payments", map(
-                                "get", map("operationId", "listPayments")
-                        )
-                )
-        );
+                "/health", map("get", map("operationId", "health"))));
 
         Map<String, Object> policy = new OpenApiAuthPreprocessor().enrich(openApi);
-        Map<String, Object> paths = (Map<String, Object>) openApi.get("paths");
-        Map<String, Object> payments = (Map<String, Object>) paths.get("/payments");
-        Map<String, Object> listPayments = (Map<String, Object>) payments.get("get");
 
-        assertThat((List<String>) listPayments.get("x-operation-extra-annotation"))
-                .containsExactly("@io.labs64.authcontext.authorization.RequireTenant");
+        assertThat(new OpenApiAuthPreprocessor().publicPaths(policy)).containsExactly("GET /health");
     }
 
-    @Test
-    @SuppressWarnings("unchecked")
-    void publicEndpointOverridesTenantDefault() {
-        Map<String, Object> openApi = map(
-                "x-labs64-auth-defaults", map("tenant", true),
-                "paths", map(
-                        "/health", map(
-                                "get", map(
-                                        "operationId", "health",
-                                        "x-labs64-auth", map("public", true)
-                                )
-                        )
-                )
-        );
-
-        Map<String, Object> policy = new OpenApiAuthPreprocessor().enrich(openApi);
-        Map<String, Object> paths = (Map<String, Object>) openApi.get("paths");
-        Map<String, Object> health = (Map<String, Object>) paths.get("/health");
-        Map<String, Object> getHealth = (Map<String, Object>) health.get("get");
-
-        assertThat((List<String>) getHealth.get("x-operation-extra-annotation"))
-                .containsExactly("@io.labs64.authcontext.authorization.PublicEndpoint");
+    private static Map<String, Object> labs64Auth(final boolean tenant, final String resource) {
+        Map<String, Object> auth = new LinkedHashMap<>();
+        if (tenant) {
+            auth.put("tenant", true);
+        }
+        if (resource != null) {
+            auth.put("resource", resource);
+        }
+        return map("auth", auth);
     }
 
     private static Map<String, Object> map(final Object... entries) {

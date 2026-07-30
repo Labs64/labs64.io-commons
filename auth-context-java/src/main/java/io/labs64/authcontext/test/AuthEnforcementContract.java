@@ -25,11 +25,12 @@ import io.labs64.authcontext.openapi.OpenApiAuthPreprocessor;
  * actually rejected at runtime without credentials.
  *
  * <p>"Phantom auth" — advertised in the contract, not enforced at runtime — is
- * the failure this closes. The test list is derived from the same
- * {@code x-labs64-auth} that produces the Cerbos policies, the gateway routes
- * and the public-path list, so contract and enforcement cannot drift apart
- * silently: a new protected operation becomes a new test case with no test
- * file to write and none to forget.
+ * the failure this closes. The test list is derived from the effective OpenAPI
+ * {@code security} requirements and
+ * {@code x-labs64.auth} metadata that produce the Cerbos policies, gateway
+ * routes and public-path list, so contract and enforcement cannot drift apart
+ * silently: a new protected operation becomes a new test case with no test file
+ * to write and none to forget.
  *
  * <p>Deliberately free of any test framework beyond the JUnit API and of any
  * HTTP client. The caller supplies an {@link AnonymousRequest} — MockMvc,
@@ -87,10 +88,9 @@ public final class AuthEnforcementContract {
      * Every operation the spec declares non-public.
      *
      * <p>Reads the canonical spec — not a build artifact — so the test cannot be
-     * fooled by a stale or missing generated file. Operations that declare no
-     * {@code x-labs64-auth} at all already fail the build in
-     * {@code OpenApiAuthPreprocessor} at {@code generate-sources}; this reads the
-     * same enrichment, so that guarantee holds here too.
+     * fooled by a stale or missing generated file. This reads the same
+     * enrichment as the build-time preprocessor, including operation/root
+     * security inheritance and inferred public operations.
      */
     public static List<ProtectedOperation> protectedOperations(final Path spec) throws IOException {
         List<ProtectedOperation> operations = new ArrayList<>();
@@ -136,7 +136,8 @@ public final class AuthEnforcementContract {
                     int status = request.execute(operation.method(), operation.samplePath());
                     if (!REJECTED.contains(status)) {
                         throw new AssertionError(String.format(
-                                "%s %s declares x-labs64-auth (tenant=%s, scopes=%s) but an unauthenticated call "
+                                "%s %s declares authentication requirements (tenant=%s, scopes=%s) but an "
+                                        + "unauthenticated call "
                                         + "returned %d. Expected 401 or 403. The contract advertises protection the "
                                         + "runtime does not enforce.",
                                 operation.method(), operation.samplePath(), operation.tenantRequired(),

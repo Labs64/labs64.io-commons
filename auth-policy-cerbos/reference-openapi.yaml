@@ -1,38 +1,51 @@
-# reference OpenAPI fixture — the decision-equivalence gate's single
-# source. The three x-labs64-auth patterns (public / tenant+scopes+resource /
-# scopes-only) are generated into Cerbos policy by generate.sh and exercised by
-# tests/truth_table_test.yaml. Module is pinned to "payment-gateway" so the edge
-# resource kind is "payment_gateway_api".
+# reference OpenAPI fixture — the decision-equivalence gate's single source.
+# Standard OAuth security plus x-labs64.auth metadata are generated into Cerbos
+# policy by generate.sh and exercised by tests/truth_table_test.yaml. Module is
+# pinned to "payment-gateway" so the edge resource kind is
+# "payment_gateway_api".
 openapi: 3.0.3
 info:
   title: reference API
   version: 1.0.0
+security:
+  - oauth: []
 paths:
   /payment-definitions:
     get:
       operationId: listPaymentDefinitions
-      x-labs64-auth:
-        public: true
+      security: []
       responses:
         "200":
           description: ok
   /payments/{id}/pay:
     post:
       operationId: payPayment
-      x-labs64-auth:
-        tenant: true
-        scopes:
-          - payment:pay
-        resource: Payment
+      security:
+        - oauth:
+            - payment:pay
+      x-labs64:
+        auth:
+          tenant: true
+          resource: Payment
       responses:
         "200":
           description: ok
   /events:
     post:
       operationId: publishEvent
-      x-labs64-auth:
-        scopes:
-          - audit-event:write
+      security:
+        - oauth:
+            - audit-event:write
       responses:
         "200":
           description: ok
+components:
+  securitySchemes:
+    oauth:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://mock-oidc.localhost/labs64io/token
+          scopes:
+            payment:pay: Execute payments.
+            audit-event:write: Publish audit events.

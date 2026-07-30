@@ -13,8 +13,9 @@ import org.springframework.mock.web.MockHttpServletResponse;
 
 /**
  * The AuthContextFilter's fail-closed gate must honor the build-generated public
- * operations (from x-labs64-auth.public) without a token, while still rejecting
- * protected requests — and it must respect the operation's HTTP method.
+ * operations inferred from effective OpenAPI auth requirements without a token,
+ * while still rejecting protected requests — and it must respect the
+ * operation's HTTP method.
  */
 class AuthContextFilterPublicPathMatcherTest {
 

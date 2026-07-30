@@ -10,10 +10,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * <p>{@code public-paths} are request-path prefixes served without a mandatory
  * auth context — reserved for NON-OpenAPI surfaces (actuator, API docs, error).
  * Public OpenAPI operations are NOT listed here: they come from the
- * build-generated {@code public-paths-location} resource ({@link PublicPathMatcher}),
- * derived from {@code x-labs64-auth.public}, so OpenAPI stays the single source of
- * truth. All other paths fail closed with 401 when the gateway headers are missing,
- * so an accidentally exposed service rejects unauthenticated traffic.
+ * build-generated {@code public-paths-location} resource
+ * ({@link PublicPathMatcher}), derived from effective OpenAPI security and
+ * {@code x-labs64.auth}, so OpenAPI stays the single source of truth. All other
+ * paths fail closed with 401 when the gateway headers are missing, so an
+ * accidentally exposed service rejects unauthenticated traffic.
  */
 @ConfigurationProperties(prefix = "labs64.auth-context")
 public class AuthContextProperties {
