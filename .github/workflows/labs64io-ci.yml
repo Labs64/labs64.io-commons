@@ -59,7 +59,7 @@ jobs:
       install-command: pip install -q -e .[dev]
       test-command: pytest -q
 
-  # Cerbos policy generation from OpenAPI OAuth security + x-labs64.auth,
+  # Cerbos policy generation from OpenAPI x-labs64.auth,
   # followed by compile + truth-table gate
   # (repo-specific — stays inline).
   cerbos:

@@ -1,7 +1,7 @@
 # Integrating OpenAPI Authorization into a Labs64.IO Module
 
 This guide explains how to add OpenAPI-driven authorization policies to a Java
-backend using standard OpenAPI `security`, the `x-labs64.auth` extension, and
+backend using the `x-labs64.auth` extension and
 `OpenApiAuthPreprocessorCli`.
 
 ## How It Works
@@ -9,7 +9,7 @@ backend using standard OpenAPI `security`, the `x-labs64.auth` extension, and
 The pipeline has four stages:
 
 ```
-OpenAPI spec (security + x-labs64.auth)
+OpenAPI spec (x-labs64.auth)
   → OpenApiAuthPreprocessorCli (build-time)
     → Cleaned OpenAPI (annotations injected)
     → Cerbos resource policies (YAML) + routing manifest
@@ -17,37 +17,15 @@ OpenAPI spec (security + x-labs64.auth)
   → auth-context-spring-boot-starter (runtime enforcement via @Authorize interceptors and central Cerbos PDP)
 ```
 
-1. **Author**: Declare OAuth2 scopes with standard `security`; add
-   `x-labs64.auth` only when an operation needs a tenant or domain resource.
+1. **Author**: Declare scopes, tenant requirements, and domain resources in
+   `x-labs64.auth`.
 2. **Build-time**: The preprocessor injects Java annotations
    (`@RequireTenant`, `@RequireScopes`, `@Authorize`, `@PublicEndpoint`) and
    emits Cerbos resource policies plus routing/public-path manifests.
 3. **Code generation**: OpenAPI Generator produces Java API interfaces with the injected annotations
 4. **Runtime**: `auth-context-spring-boot-starter` auto-configures filters and interceptors that enforce the annotations
 
-## Step 1: Declare OpenAPI Security and Labs64 Metadata
-
-Register the OAuth2 scheme once:
-
-```yaml
-components:
-  securitySchemes:
-    oauth:
-      type: oauth2
-      flows:
-        clientCredentials:
-          tokenUrl: http://mock-oidc.localhost/labs64io/token
-          scopes:
-            my-resource:read: Read resources.
-            my-resource:write: Create and update resources.
-```
-
-You may set a global authenticated default:
-
-```yaml
-security:
-  - oauth: []
-```
+## Step 1: Declare Labs64 Auth Metadata
 
 ### Require tenant + scopes (authenticated endpoint)
 
@@ -56,12 +34,11 @@ paths:
   /my-resource:
     get:
       operationId: listMyResources
-      security:
-        - oauth:
-            - my-resource:read
       x-labs64:
         auth:
           tenant: true
+          scopes:
+            - my-resource:read
 ```
 
 ### Require tenant only (no scope check)
@@ -71,8 +48,6 @@ paths:
   /my-resource:
     post:
       operationId: createMyResource
-      security:
-        - oauth: []
       x-labs64:
         auth:
           tenant: true
@@ -85,12 +60,10 @@ paths:
   /health:
     get:
       operationId: healthCheck
-      security: []
 ```
 
-When there is no global security, an operation with no effective `security` and
-no `x-labs64.auth` requirements is also inferred public. `security: []` is the
-standard explicit override when a global security requirement exists.
+An operation with no `x-labs64.auth` requirements is inferred public; no marker
+such as `security: []` or `public: true` is needed.
 
 ### Path-level Labs64 metadata
 
@@ -100,18 +73,14 @@ paths:
     x-labs64:
       auth:
         tenant: true
+        scopes:
+          - my-resource:read
     get:
       operationId: listMyResources
-      security:
-        - oauth:
-            - my-resource:read
-      # Inherits tenant=true
+      # Inherits tenant=true and my-resource:read
     post:
       operationId: createMyResource
-      security:
-        - oauth:
-            - my-resource:write
-      # Also inherits tenant=true
+      # Also inherits both requirements; use operation-level x-labs64 to override.
 ```
 
 ### Domain (Tier-2) resource authorization
@@ -129,12 +98,11 @@ paths:
   /payments/{paymentId}/pay:
     post:
       operationId: payPayment
-      security:
-        - oauth:
-            - payment:pay
       x-labs64:
         auth:
           tenant: true
+          scopes:
+            - payment:pay
           resource: Payment      # → generated domain permit + tenant guard
 ```
 
@@ -146,14 +114,9 @@ RLS), by design.
 
 ### Public inference
 
-An operation receives `@PublicEndpoint` only when:
-
-- its effective OpenAPI security does not require the `oauth` scheme; and
-- it has no generated `@RequireTenant`, `@RequireScopes`, or `@Authorize`.
-
-`oauth: []` still requires authentication, even though it generates no scope
-annotation. Other security schemes do not count as Labs64 OAuth requirements.
-Operation-level `security` overrides root-level `security`.
+An operation receives `@PublicEndpoint` only when `x-labs64.auth` produces none
+of `@RequireTenant`, `@RequireScopes`, or `@Authorize`. Standard OpenAPI
+`security` is intentionally not interpreted by the Labs64 preprocessor.
 
 ## Step 2: Configure the Maven Build
 
@@ -169,8 +132,7 @@ Add three things to your `pom.xml`:
     <exec-maven-plugin.version>3.6.2</exec-maven-plugin.version>
     <openapi.source>${project.basedir}/../your-api-module/src/main/resources/openapi/openapi-your-module.yaml</openapi.source>
     <openapi.generated>${project.build.directory}/generated-openapi/openapi-your-module.yaml</openapi.generated>
-    <!-- Cerbos policies + routes manifest generated from OpenAPI security
-         and x-labs64.auth.
+    <!-- Cerbos policies + routes manifest generated from x-labs64.auth.
          auth-policy.module must equal the module's gateway prefix
          (= policy-sources.yaml name); it is baked into the Cerbos resource
          kind (your-module -> your_module_api). Generated output is a build
@@ -431,12 +393,11 @@ paths:
   /audit/publish:
     post:
       operationId: publishEvent
-      security:
-        - oauth:
-            - audit-event:write
       x-labs64:
         auth:
           tenant: true
+          scopes:
+            - audit-event:write
 ```
 
 ### Generated outputs

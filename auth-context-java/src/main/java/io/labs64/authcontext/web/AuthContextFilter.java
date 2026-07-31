@@ -88,7 +88,7 @@ public class AuthContextFilter extends OncePerRequestFilter {
 
     private boolean isPublicPath(String method, String uri) {
         // OpenAPI operations: matched per method+template from the build-generated
-        // list (derived from effective security + x-labs64.auth) — OpenAPI is
+        // list (derived from x-labs64.auth) — OpenAPI is
         // the source of truth.
         if (publicPathMatcher.matches(method, uri)) {
             return true;

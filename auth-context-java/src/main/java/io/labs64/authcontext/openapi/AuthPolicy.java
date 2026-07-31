@@ -1,18 +1,12 @@
 package io.labs64.authcontext.openapi;
 
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Authentication and authorization requirements extracted from standard
- * OpenAPI {@code security} plus {@code x-labs64.auth}.
- *
- * <p>OAuth scopes come from the {@code oauth} Security Requirement. Labs64
- * metadata is limited to the concerns OpenAPI cannot express: tenant and
- * domain-resource requirements.
+ * Authentication and authorization requirements extracted from
+ * {@code x-labs64.auth}.
  */
 record AuthPolicy(boolean isPublic, boolean tenantRequired,
         List<String> scopes, String resourceType) {
@@ -21,19 +15,18 @@ record AuthPolicy(boolean isPublic, boolean tenantRequired,
      * Builds a policy from the current contract.
      *
      * @param value effective operation/path-level {@code x-labs64}
-     * @param security    effective operation/root-level {@code security}
      */
-    static AuthPolicy from(final Object value, final Object security) {
-        SecurityRequirements requirements = SecurityRequirements.from(security);
+    static AuthPolicy from(final Object value) {
         Map<String, Object> auth = authMap(value);
         boolean tenantRequired = bool(auth.get("tenant"));
+        List<String> scopes = scopes(auth.get("scopes"));
         String resourceType = resourceType(auth.get("resource"));
-        boolean publicEndpoint = !requirements.oauthRequired()
-                && !tenantRequired
+        boolean publicEndpoint = !tenantRequired
+                && scopes.isEmpty()
                 && resourceType == null;
 
         return new AuthPolicy(publicEndpoint, tenantRequired,
-                requirements.scopes(), resourceType);
+                scopes, resourceType);
     }
 
     @SuppressWarnings("unchecked")
@@ -91,53 +84,14 @@ record AuthPolicy(boolean isPublic, boolean tenantRequired,
         return List.copyOf(result);
     }
 
-    /**
-     * Effective OpenAPI security after operation-level override/root-level
-     * inheritance has already been resolved.
-     */
-    private record SecurityRequirements(boolean oauthRequired, List<String> scopes) {
-
-        @SuppressWarnings("unchecked")
-        private static SecurityRequirements from(final Object value) {
-            if (value == null) {
-                return new SecurityRequirements(false, List.of());
-            }
-            if (!(value instanceof List<?> requirements)) {
-                throw new IllegalArgumentException("security must be an array");
-            }
-            if (requirements.isEmpty()) {
-                return new SecurityRequirements(false, List.of());
-            }
-
-            Set<String> scopes = new LinkedHashSet<>();
-            boolean oauthRequired = true;
-
-            for (Object requirementValue : requirements) {
-                if (!(requirementValue instanceof Map<?, ?> rawRequirement)) {
-                    throw new IllegalArgumentException("security requirements must be objects");
-                }
-             
-                Map<String, Object> requirement = (Map<String, Object>) rawRequirement;
-             
-                // An empty requirement is the OpenAPI anonymous alternative.
-                if (requirement.isEmpty()) {
-                    return new SecurityRequirements(false, List.of());
-                }
-             
-                if (!requirement.containsKey(OpenApiAuthPreprocessor.OAUTH_SCHEME)) {
-                    // Security Requirement Objects are alternatives. OAuth is
-                    // required only when every alternative contains it.
-                    oauthRequired = false;
-                    continue;
-                }
-                Object oauthScopes = requirement.get(OpenApiAuthPreprocessor.OAUTH_SCHEME);
-                if (!(oauthScopes instanceof List<?> list)) {
-                    throw new IllegalArgumentException("security." + OpenApiAuthPreprocessor.OAUTH_SCHEME
-                            + " must be an array of scopes");
-                }
-                scopes.addAll(stringList(list, "security." + OpenApiAuthPreprocessor.OAUTH_SCHEME));
-            }
-            return new SecurityRequirements(oauthRequired, List.copyOf(scopes));
+    private static List<String> scopes(final Object value) {
+        if (value == null) {
+            return List.of();
         }
+        if (!(value instanceof List<?> list)) {
+            throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
+                    + ".auth.scopes must be an array");
+        }
+        return stringList(list, OpenApiAuthPreprocessor.AUTH_EXTENSION + ".auth.scopes");
     }
 }

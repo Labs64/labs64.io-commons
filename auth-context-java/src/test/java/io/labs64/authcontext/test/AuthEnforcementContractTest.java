@@ -37,25 +37,21 @@ class AuthEnforcementContractTest {
             info:
               title: Test
               version: 1.0.0
-            security:
-              - oauth: []
             paths:
               /audit/publish:
                 post:
                   operationId: publishEvent
-                  security:
-                    - oauth:
-                        - audit-event:write
                   x-labs64:
                     auth:
                       tenant: true
+                      scopes:
+                        - audit-event:write
                   responses:
                     '200':
                       description: ok
               /health:
                 get:
                   operationId: health
-                  security: []
                   responses:
                     '200':
                       description: ok
@@ -266,8 +262,9 @@ class AuthEnforcementContractTest {
                   /c:
                     delete:
                       operationId: c
-                      security:
-                        - oauth: [ 'x:write' ]
+                      x-labs64:
+                        auth:
+                          scopes: [ 'x:write' ]
                       responses: { '200': { description: ok } }
                 """;
         List<String> called = new ArrayList<>();
@@ -280,7 +277,7 @@ class AuthEnforcementContractTest {
     }
 
     @Test
-    void honoursGlobalSecurityDeclaredAtSpecLevel() throws IOException {
+    void ignoresStandardOpenApiSecurity() throws IOException {
         String yaml = """
                 openapi: 3.0.3
                 info:
@@ -297,9 +294,7 @@ class AuthEnforcementContractTest {
                 """;
         List<ProtectedOperation> operations = AuthEnforcementContract.protectedOperations(spec(yaml));
 
-        assertThat(operations).hasSize(1);
-        assertThat(operations.get(0).tenantRequired()).isFalse();
-        assertThat(operations.get(0).scopes()).containsExactly("payment:read");
+        assertThat(operations).isEmpty();
     }
 
     @Test

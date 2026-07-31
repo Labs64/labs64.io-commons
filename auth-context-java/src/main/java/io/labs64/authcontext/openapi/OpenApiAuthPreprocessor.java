@@ -17,14 +17,12 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 
 /**
  * Generates OpenAPI generator annotations and gateway policy from
- * standard OpenAPI {@code security} and {@code x-labs64.auth}.
+ * {@code x-labs64.auth}.
  */
 public class OpenApiAuthPreprocessor {
 
     public static final String AUTH_EXTENSION = "x-labs64";
     public static final String EXTRA_ANNOTATION_EXTENSION = "x-operation-extra-annotation";
-    public static final String OAUTH_SCHEME = "oauth";
-
     private static final String PUBLIC_ENDPOINT = "@io.labs64.authcontext.authorization.PublicEndpoint";
     private static final String REQUIRE_TENANT = "@io.labs64.authcontext.authorization.RequireTenant";
     private static final String REQUIRE_SCOPES = "@io.labs64.authcontext.authorization.RequireScopes";
@@ -62,8 +60,7 @@ public class OpenApiAuthPreprocessor {
      * ({@code policies/*.yaml} resource policies plus
      * {@code policies/_schemas/*.json} schemas), the routes manifest, and the
      * flat public-path list. OpenAPI stays the single source of truth for
-     * enforcement — the same OpenAPI security requirements and
-     * {@code x-labs64.auth} metadata feed every output.
+     * enforcement — the same {@code x-labs64.auth} metadata feeds every output.
      *
      * @param cerbosOutputDir   base dir for {@code policies/} + {@code policies/_schemas/}; null to skip
      * @param module            module name; required when {@code cerbosOutputDir} or {@code routesOutput} is set
@@ -101,7 +98,7 @@ public class OpenApiAuthPreprocessor {
     /**
      * The public operations as {@code <METHOD> <path-template>} entries — the
      * backend {@code AuthContextFilter}'s public-path source, generated from the
-     * same effective OpenAPI security and {@code x-labs64.auth} metadata as the
+     * same {@code x-labs64.auth} metadata as the
      * generated annotations and Cerbos policies. Only OpenAPI operations appear
      * here; non-API surfaces (actuator, docs) stay configured prefixes on the
      * filter.
@@ -119,7 +116,7 @@ public class OpenApiAuthPreprocessor {
 
     private String publicPathsDocument(final Map<String, Object> policy) {
         StringBuilder doc = new StringBuilder();
-        doc.append("# GENERATED from OpenAPI security and x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n");
+        doc.append("# GENERATED from x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n");
         doc.append("# One '<METHOD> <path-template>' per public operation; consumed by AuthContextFilter.\n");
         for (String entry : publicPaths(policy)) {
             doc.append(entry).append('\n');
@@ -179,20 +176,19 @@ public class OpenApiAuthPreprocessor {
         Map<String, Object> doc = new LinkedHashMap<>();
         doc.put("apiVersion", "api.cerbos.dev/v1");
         doc.put("resourcePolicy", rp);
-        return "# GENERATED from OpenAPI security and x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n"
+        return "# GENERATED from x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n"
                 + cerbosYamlMapper.writeValueAsString(doc);
     }
 
     /**
      * Translates the enriched policy document into Cerbos resource policies —
      * the replacement for the two legacy tiers, from the SAME
-     * OpenAPI security and {@code x-labs64.auth} so OpenAPI stays the single
-     * source of truth.
+     * {@code x-labs64.auth} so OpenAPI stays the single source of truth.
      *
      * <p>Emits one <b>edge</b> resource policy per module (kind
      * {@link #cerbosResourceKind}, one ALLOW rule per operationId, the three
      * requirements translated to CEL 1:1: public → no condition; tenant →
-     * {@code has(principal.attr.tenant) || service role}; OAuth scopes →
+     * {@code has(principal.attr.tenant) || service role}; scopes →
      * OR-overlap on {@code principal.attr.scopes}). Additionally, for every
      * operation declaring {@code x-labs64.auth.resource}, one <b>domain</b>
      * resource policy per type carrying the same ALLOW rules plus a structural
@@ -278,13 +274,12 @@ public class OpenApiAuthPreprocessor {
         doc.put("module", module);
         doc.put("basePath", basePath == null ? "" : basePath);
         doc.put("routes", policy.get("routes"));
-        return "# GENERATED from OpenAPI security and x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n"
+        return "# GENERATED from x-labs64.auth by OpenApiAuthPreprocessor — do not edit.\n"
                 + cerbosYamlMapper.writeValueAsString(doc);
     }
 
     @SuppressWarnings("unchecked")
     public Map<String, Object> enrich(final Map<String, Object> openApi) {
-        Object rootSecurity = openApi.get("security");
         Map<String, Object> paths = asMap(openApi.get("paths"), "paths");
         List<Map<String, Object>> routes = new ArrayList<>();
 
@@ -304,10 +299,7 @@ public class OpenApiAuthPreprocessor {
                 Object operationAuth = operation.containsKey(AUTH_EXTENSION)
                         ? operation.get(AUTH_EXTENSION)
                         : pathAuth;
-                Object effectiveSecurity = operation.containsKey("security")
-                        ? operation.get("security")
-                        : rootSecurity;
-                AuthPolicy auth = AuthPolicy.from(operationAuth, effectiveSecurity);
+                AuthPolicy auth = AuthPolicy.from(operationAuth);
 
                 List<String> extraAnnotations = extraAnnotations(operation.get(EXTRA_ANNOTATION_EXTENSION));
                 extraAnnotations.addAll(annotations(auth, operation.get("operationId").toString()));

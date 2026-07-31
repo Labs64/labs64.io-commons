@@ -25,9 +25,8 @@ import io.labs64.authcontext.openapi.OpenApiAuthPreprocessor;
  * actually rejected at runtime without credentials.
  *
  * <p>"Phantom auth" — advertised in the contract, not enforced at runtime — is
- * the failure this closes. The test list is derived from the effective OpenAPI
- * {@code security} requirements and
- * {@code x-labs64.auth} metadata that produce the Cerbos policies, gateway
+ * the failure this closes. The test list is derived from the effective
+ * {@code x-labs64.auth} metadata that produces the Cerbos policies, gateway
  * routes and public-path list, so contract and enforcement cannot drift apart
  * silently: a new protected operation becomes a new test case with no test file
  * to write and none to forget.
@@ -89,8 +88,8 @@ public final class AuthEnforcementContract {
      *
      * <p>Reads the canonical spec — not a build artifact — so the test cannot be
      * fooled by a stale or missing generated file. This reads the same
-     * enrichment as the build-time preprocessor, including operation/root
-     * security inheritance and inferred public operations.
+ * enrichment as the build-time preprocessor, including path-level
+ * {@code x-labs64.auth} inheritance and inferred public operations.
      */
     public static List<ProtectedOperation> protectedOperations(final Path spec) throws IOException {
         List<ProtectedOperation> operations = new ArrayList<>();

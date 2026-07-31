@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
  * Matches a request (method + URI) against the build-generated set of public
  * OpenAPI operations. The generated {@code auth-public-paths} resource carries
  * one {@code <METHOD> <path-template>} line per operation inferred public from
- * its effective OpenAPI security and {@code x-labs64.auth} metadata, so OpenAPI
+ * its effective {@code x-labs64.auth} metadata, so OpenAPI
  * stays the single source of truth for the {@link AuthContextFilter}'s
  * public-path decision — no hand-maintained list.
  *
