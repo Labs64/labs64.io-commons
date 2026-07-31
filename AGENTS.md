@@ -15,7 +15,7 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-c
 5. **Fail closed.** Non-public paths without a valid user identity return 401. Never weaken this default.
 6. **Value sanitization pattern `^[a-zA-Z0-9_.:-]+$`** must match the ACS (traefik-authproxy) exactly.
 7. **OpenAPI is the single source of policy.** Cerbos policies are GENERATED
-   from standard OpenAPI `security` plus each module's `x-labs64.auth` metadata
+   from each module's `x-labs64.auth` metadata
    by `OpenApiAuthPreprocessor` — never hand-edit generated policy YAML.
    Decision equivalence (edge + domain, incl. the cross-tenant isolation
    invariant) is proven by `auth-policy-cerbos/validate.sh` (`just cerbos`);

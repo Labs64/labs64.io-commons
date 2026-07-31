@@ -99,9 +99,9 @@ snapshot is the exact state this section exists to avoid recreating.
 
 ## OpenAPI Auth Policy Generation
 
-Java services declare authentication and scopes with standard OpenAPI `security`,
-and use `x-labs64.auth` only for Labs64-specific tenant and domain-resource
-metadata. The preprocessor generates derived artifacts from that same source:
+Java services declare scopes, tenant requirements, and domain-resource metadata
+with `x-labs64.auth`. The preprocessor generates derived artifacts from that
+same source:
 
 - an OpenAPI file enriched with `x-operation-extra-annotation` for OpenAPI Generator templates
 - Cerbos policies for the central PDP (`--cerbos-output`)
@@ -110,29 +110,25 @@ metadata. The preprocessor generates derived artifacts from that same source:
 Example:
 
 ```yaml
-security:
-  - oauth: []
-
 paths:
   /payments:
     get:
       operationId: listPayments
-      security:
-        - oauth: [payment:read]
       x-labs64:
         auth:
           tenant: true
+          scopes:
+            - payment:read
   /health:
     get:
       operationId: health
-      security: []
 ```
 
-OAuth scopes generate `@RequireScopes`; `x-labs64.auth.tenant` generates
+`x-labs64.auth.scopes` generates `@RequireScopes`; `x-labs64.auth.tenant` generates
 `@RequireTenant`; and `x-labs64.auth.resource` generates `@Authorize`. An
-operation is public only when its effective OpenAPI security does not require
-the `oauth` scheme and it has no Labs64 auth requirements; public operations
-generate `@PublicEndpoint`.
+operation is public when it has no Labs64 auth requirements; public operations
+generate `@PublicEndpoint`. Standard OpenAPI `security` is not interpreted by
+this custom header-based authorization pipeline.
 
 CLI:
 
