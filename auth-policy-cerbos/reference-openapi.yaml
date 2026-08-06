@@ -22,7 +22,8 @@ paths:
           tenant: true
           scopes:
             - payment:pay
-          resource: Payment
+          resourceType: Payment
+          resource: "#paymentId"
       responses:
         "200":
           description: ok

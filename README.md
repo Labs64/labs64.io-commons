@@ -125,9 +125,11 @@ paths:
 ```
 
 `x-labs64.auth.scopes` generates `@RequireScopes`; `x-labs64.auth.tenant` generates
-`@RequireTenant`; and `x-labs64.auth.resource` generates `@Authorize`. An
-operation is public when it has no Labs64 auth requirements; public operations
-generate `@PublicEndpoint`. Standard OpenAPI `security` is not interpreted by
+`@RequireTenant`; and `x-labs64.auth.resourceType` generates `@Authorize`. An optional
+`x-labs64.auth.resource` supplies its SpEL resource reference, for example
+`#paymentId`. An operation is public when it has no Labs64 auth requirements;
+public operations generate `@PublicEndpoint`. Standard OpenAPI `security` is not
+interpreted by
 this custom header-based authorization pipeline.
 
 CLI:

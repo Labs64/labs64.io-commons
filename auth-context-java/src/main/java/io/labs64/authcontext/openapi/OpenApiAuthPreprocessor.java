@@ -190,7 +190,7 @@ public class OpenApiAuthPreprocessor {
      * requirements translated to CEL 1:1: public → no condition; tenant →
      * {@code has(principal.attr.tenant) || service role}; scopes →
      * OR-overlap on {@code principal.attr.scopes}). Additionally, for every
-     * operation declaring {@code x-labs64.auth.resource}, one <b>domain</b>
+     * operation declaring {@code x-labs64.auth.resourceType}, one <b>domain</b>
      * resource policy per type carrying the same ALLOW rules plus a structural
      * tenant-guard DENY (the cross-tenant isolation invariant). Returns a
      * filename → YAML map: {@code <kind>.yaml} and
@@ -327,9 +327,29 @@ public class OpenApiAuthPreprocessor {
             annotations.add(REQUIRE_SCOPES + "({" + quotedCsv(auth.scopes()) + "})");
         }
         if (auth.resourceType() != null) {
-            annotations.add(AUTHORIZE + "(action = \"" + operationId + "\", resourceType = \"" + auth.resourceType() + "\")");
+            annotations.add(authorizeAnnotation(auth, operationId));
         }
         return annotations;
+    }
+
+    private String authorizeAnnotation(final AuthPolicy auth, final String operationId) {
+        StringBuilder annotation = new StringBuilder(AUTHORIZE)
+                .append("(action = \"")
+                .append(javaString(operationId))
+                .append("\"");
+        if (auth.resource() != null) {
+            annotation.append(", resource = \"")
+                    .append(javaString(auth.resource()))
+                    .append("\"");
+        }
+        return annotation.append(", resourceType = \"")
+                .append(javaString(auth.resourceType()))
+                .append("\")")
+                .toString();
+    }
+
+    private String javaString(final String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private List<String> extraAnnotations(final Object value) {

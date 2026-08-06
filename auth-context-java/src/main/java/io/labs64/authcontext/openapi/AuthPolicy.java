@@ -9,7 +9,7 @@ import java.util.Map;
  * {@code x-labs64.auth}.
  */
 record AuthPolicy(boolean isPublic, boolean tenantRequired,
-        List<String> scopes, String resourceType) {
+        List<String> scopes, String resourceType, String resource) {
 
     /**
      * Builds a policy from the current contract.
@@ -20,13 +20,18 @@ record AuthPolicy(boolean isPublic, boolean tenantRequired,
         Map<String, Object> auth = authMap(value);
         boolean tenantRequired = bool(auth.get("tenant"));
         List<String> scopes = scopes(auth.get("scopes"));
-        String resourceType = resourceType(auth.get("resource"));
+        String resourceType = string(auth.get("resourceType"), "resourceType");
+        String resource = string(auth.get("resource"), "resource");
+        if (resource != null && resourceType == null) {
+            throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
+                    + ".auth.resource requires x-labs64.auth.resourceType");
+        }
         boolean publicEndpoint = !tenantRequired
                 && scopes.isEmpty()
                 && resourceType == null;
 
         return new AuthPolicy(publicEndpoint, tenantRequired,
-                scopes, resourceType);
+                scopes, resourceType, resource);
     }
 
     @SuppressWarnings("unchecked")
@@ -52,15 +57,15 @@ record AuthPolicy(boolean isPublic, boolean tenantRequired,
         return (Map<String, Object>) rawAuth;
     }
 
-    private static String resourceType(final Object value) {
+    private static String string(final Object value, final String field) {
         if (value == null) {
             return null;
         }
-        if (value instanceof String type && !type.isBlank()) {
-            return type;
+        if (value instanceof String string && !string.isBlank()) {
+            return string;
         }
         throw new IllegalArgumentException(OpenApiAuthPreprocessor.AUTH_EXTENSION
-                + ".auth.resource must be a non-blank string");
+                + ".auth." + field + " must be a non-blank string");
     }
 
     private static boolean bool(final Object value) {

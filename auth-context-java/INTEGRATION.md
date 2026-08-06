@@ -85,12 +85,13 @@ paths:
 
 ### Domain (Tier-2) resource authorization
 
-Declare `resource: <Type>` to have the operation authorized in-process by the
+Declare `resourceType: <Type>` to have the operation authorized in-process by the
 module's `@Authorize` PEP against a typed Cerbos resource. This is
 the OpenAPI-native source for the generated domain policy set
 (`auth-policy-domain.cerbos`): the preprocessor emits one `permit` keyed on the
 operationId, conditioned on the same `tenant`/`scopes`, plus one structural
-cross-tenant guard per resource type. Operations without `resource` are
+cross-tenant guard per resource type. Use `resource` for the optional SpEL
+reference passed to the resource resolver. Operations without `resourceType` are
 edge-only (coarse reachability).
 
 ```yaml
@@ -103,7 +104,8 @@ paths:
           tenant: true
           scopes:
             - payment:pay
-          resource: Payment      # → generated domain permit + tenant guard
+          resourceType: Payment  # → generated domain permit + tenant guard
+          resource: "#paymentId" # → @Authorize resource reference
 ```
 
 The module supplies the resource attributes at request time via a

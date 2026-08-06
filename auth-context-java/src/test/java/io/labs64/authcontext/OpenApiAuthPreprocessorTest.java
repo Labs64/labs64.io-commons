@@ -185,6 +185,37 @@ class OpenApiAuthPreprocessorTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void resourceReferenceIsIncludedInAuthorizeAnnotation() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments/{paymentId}", map("get", map(
+                        "operationId", "getPayment",
+                        "x-labs64", map("auth", map(
+                                "resourceType", "Payment",
+                                "resource", "#paymentId"))))));
+
+        new OpenApiAuthPreprocessor().enrich(openApi);
+
+        Map<String, Object> operation = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) openApi.get("paths")).get("/payments/{paymentId}")).get("get");
+        assertThat((List<String>) operation.get("x-operation-extra-annotation"))
+                .containsExactly(AUTHORIZE + "(action = \"getPayment\", resource = \"#paymentId\", "
+                        + "resourceType = \"Payment\")");
+    }
+
+    @Test
+    void resourceReferenceRequiresResourceType() {
+        Map<String, Object> openApi = map("paths", map(
+                "/payments/{paymentId}", map("get", map(
+                        "operationId", "getPayment",
+                        "x-labs64", map("auth", map("resource", "#paymentId"))))));
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new OpenApiAuthPreprocessor().enrich(openApi))
+                .withMessageContaining("x-labs64.auth.resource requires x-labs64.auth.resourceType");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void anonymousSecurityAlternativeMakesOperationPublic() {
         Map<String, Object> openApi = map("paths", map(
                 "/catalog", map("get", map(
@@ -283,7 +314,8 @@ class OpenApiAuthPreprocessorTest {
                           tenant: true
                           scopes:
                             - payment:pay
-                          resource: Payment
+                          resourceType: Payment
+                          resource: "#id"
                 """);
         Path cerbosDir = tempDir.resolve("cerbos");
         Path routes = tempDir.resolve("payment-gateway.routes.yaml");
@@ -359,14 +391,14 @@ class OpenApiAuthPreprocessorTest {
         assertThat(new OpenApiAuthPreprocessor().publicPaths(policy)).containsExactly("GET /health");
     }
 
-    private static Map<String, Object> labs64Auth(final boolean tenant, final String resource,
+    private static Map<String, Object> labs64Auth(final boolean tenant, final String resourceType,
             final String... scopes) {
         Map<String, Object> auth = new LinkedHashMap<>();
         if (tenant) {
             auth.put("tenant", true);
         }
-        if (resource != null) {
-            auth.put("resource", resource);
+        if (resourceType != null) {
+            auth.put("resourceType", resourceType);
         }
         if (scopes.length > 0) {
             auth.put("scopes", List.of(scopes));
