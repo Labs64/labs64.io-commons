@@ -20,10 +20,11 @@
     <properties>
         <!-- Library targets 17 so every ecosystem service (Java >= 17) can consume it -->
         <java.version>17</java.version>
+        <protobuf-java.version>4.35.1</protobuf-java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Points at the latest RELEASED auth-context. A dev may temporarily point
              this at the current -SNAPSHOT when unreleased features are needed. -->
-        <auth-context.version>0.0.3</auth-context.version>
+        <auth-context.version>0.4.0</auth-context.version>
     </properties>
 
     <distributionManagement>
