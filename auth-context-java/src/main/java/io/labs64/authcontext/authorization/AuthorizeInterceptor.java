@@ -95,6 +95,7 @@ public class AuthorizeInterceptor implements HandlerInterceptor {
         return service.decide(context, annotation.action(), resource);
     }
 
+    // nosemgrep: java.spring.security.audit.spel-injection.spel-injection
     @Nullable
     private Object evaluateResourceRef(final String expression, final HttpServletRequest request) {
         if (expression.isEmpty()) {

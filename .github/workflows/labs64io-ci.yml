@@ -30,18 +30,27 @@ permissions:
 jobs:
   auth-context:
     uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    secrets:
+      L64_PUB_CI_USERNAME: ${{ secrets.L64_PUB_CI_USERNAME }}
+      L64_PUB_CI_PASSWORD: ${{ secrets.L64_PUB_CI_PASSWORD }}
     with:
       working-directory: auth-context-java
       maven-goals: test
 
   openapi-starter:
     uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    secrets:
+      L64_PUB_CI_USERNAME: ${{ secrets.L64_PUB_CI_USERNAME }}
+      L64_PUB_CI_PASSWORD: ${{ secrets.L64_PUB_CI_PASSWORD }}
     with:
       working-directory: openapi-spring-boot-starter
       maven-goals: test
 
   authz-queryplan:
     uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    secrets:
+      L64_PUB_CI_USERNAME: ${{ secrets.L64_PUB_CI_USERNAME }}
+      L64_PUB_CI_PASSWORD: ${{ secrets.L64_PUB_CI_PASSWORD }}
     with:
       working-directory: authz-queryplan-jpa
       pre-install-dirs: auth-context-java

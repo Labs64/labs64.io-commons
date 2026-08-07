@@ -20,11 +20,27 @@
     <properties>
         <!-- Library targets 17 so every ecosystem service (Java >= 17) can consume it -->
         <java.version>17</java.version>
+        <protobuf-java.version>4.35.1</protobuf-java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <!-- Points at the latest RELEASED auth-context. A dev may temporarily point
              this at the current -SNAPSHOT when unreleased features are needed. -->
-        <auth-context.version>0.0.3</auth-context.version>
+        <auth-context.version>0.1.0-SNAPSHOT</auth-context.version>
     </properties>
+
+    <repositories>
+        <repository>
+            <id>labs64-nexus-snapshots</id>
+            <url>https://nexus.labs64.com/repository/labs64.io-snapshots/</url>
+            <releases><enabled>false</enabled></releases>
+            <snapshots><enabled>true</enabled></snapshots>
+        </repository>
+        <repository>
+            <id>labs64-nexus</id>
+            <url>https://nexus.labs64.com/repository/labs64.io-releases/</url>
+            <releases><enabled>true</enabled></releases>
+            <snapshots><enabled>false</enabled></snapshots>
+        </repository>
+    </repositories>
 
     <distributionManagement>
         <repository>
@@ -82,7 +98,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
-                        <version>3.2.1</version>
+                        <version>3.4.0</version>
                         <executions>
                             <execution>
                                 <goals>
@@ -94,7 +110,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.3.2</version>
+                        <version>3.12.0</version>
                         <executions>
                             <execution>
                                 <goals>
@@ -109,7 +125,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>3.1.0</version>
+                        <version>3.2.8</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -137,7 +153,7 @@
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
-                        <version>0.8.0</version>
+                        <version>0.11.0</version>
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>ossrh</publishingServerId>

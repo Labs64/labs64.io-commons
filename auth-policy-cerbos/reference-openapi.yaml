@@ -3,7 +3,7 @@
 # policy by generate.sh and exercised by tests/truth_table_test.yaml. Module is
 # pinned to "payment-gateway" so the edge resource kind is
 # "payment_gateway_api".
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: reference API
   version: 1.0.0
