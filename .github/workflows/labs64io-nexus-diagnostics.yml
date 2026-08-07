@@ -68,7 +68,7 @@ jobs:
           cat > diag.txt <<< "nexus diagnostics test artifact"
           mvn -B -ntp -s ~/.m2/settings.xml deploy:deploy-file \
             -DgroupId=io.labs64.citest -DartifactId=nexus-diagnostics \
-            -Dversion=0.0.1-SNAPSHOT -Dpackaging=txt -Dfile=diag.txt \
+            -Dversion=0.1.0-SNAPSHOT -Dpackaging=txt -Dfile=diag.txt \
             -DrepositoryId=labs64-nexus-snapshots \
             -Durl=https://nexus.labs64.com/repository/labs64.io-snapshots/ \
             && echo "SNAPSHOT DEPLOY: OK" || echo "SNAPSHOT DEPLOY: FAILED"
