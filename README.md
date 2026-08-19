@@ -3,6 +3,9 @@
 # Labs64.IO :: Commons
 
 [![CI](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml/badge.svg)](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml)
+[![Maven Central (auth-context)](https://img.shields.io/maven-central/v/io.labs64/auth-context-spring-boot-starter)](https://central.sonatype.com/artifact/io.labs64/auth-context-spring-boot-starter)
+[![Maven Central (openapi-starter)](https://img.shields.io/maven-central/v/io.labs64/openapi-spring-boot-starter)](https://central.sonatype.com/artifact/io.labs64/openapi-spring-boot-starter)
+[![Maven Central (authz-queryplan-jpa)](https://img.shields.io/maven-central/v/io.labs64/authz-queryplan-jpa)](https://central.sonatype.com/artifact/io.labs64/authz-queryplan-jpa)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/index.html)
 
