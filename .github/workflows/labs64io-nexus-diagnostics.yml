@@ -1,5 +1,5 @@
 # .github/workflows/labs64io-nexus-diagnostics.yml
-name: Labs64.IO - Nexus Diagnostics
+name: Labs64.IO - Commons - Nexus Diagnostics
 
 on:
   workflow_dispatch:
