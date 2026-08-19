@@ -2,6 +2,10 @@
 
 # Labs64.IO :: Commons
 
+[![CI](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml/badge.svg)](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/index.html)
+
 Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io).
 
 ## Libraries
