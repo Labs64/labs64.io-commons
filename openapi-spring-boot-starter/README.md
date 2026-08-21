@@ -8,7 +8,7 @@ Shared runtime OpenAPI and Swagger UI configuration for Labs64.IO servlet applic
 <dependency>
     <groupId>io.labs64</groupId>
     <artifactId>openapi-spring-boot-starter</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 

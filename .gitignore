@@ -24,5 +24,8 @@ build/
 *.swp
 *~
 
+# --- Claude Code ---
+.claude/
+
 # --- Logs ---
 *.log
