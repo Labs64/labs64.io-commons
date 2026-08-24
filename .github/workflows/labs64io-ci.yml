@@ -10,7 +10,7 @@ on:
       release-auth-context-version:
         required: false
         type: string
-        description: "Release auth-context-spring-boot-starter at this version (X.Y.Z). Leave blank to skip."
+        description: "Release auth-context-core and auth-context-spring-boot-starter at this version (X.Y.Z). Leave blank to skip."
       release-openapi-starter-version:
         required: false
         type: string

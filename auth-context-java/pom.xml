@@ -1,15 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-    <groupId>io.labs64</groupId>
-    <artifactId>auth-context-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
-
-    <name>Labs64.IO :: Auth Context :: Spring Boot Starter</name>
-    <description>Trusted gateway auth-context (X-Auth-*) parsing, enforcement and propagation for Labs64.IO services</description>
-    <url>https://labs64.io</url>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -17,8 +9,21 @@
         <version>4.1.0</version>
     </parent>
 
+    <groupId>io.labs64</groupId>
+    <artifactId>auth-context-java-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Labs64.IO :: Auth Context :: Java</name>
+    <description>Java reactor for the transport-neutral auth-context core and Spring Boot integration</description>
+    <url>https://labs64.io</url>
+
+    <modules>
+        <module>auth-context-core</module>
+        <module>auth-context-spring-boot-starter</module>
+    </modules>
+
     <properties>
-        <!-- Library targets 17 so every ecosystem service (Java >= 17) can consume it -->
         <java.version>17</java.version>
         <protobuf-java.version>4.35.1</protobuf-java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -42,114 +47,20 @@
         </snapshotRepository>
     </distributionManagement>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-webmvc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
-            <optional>true</optional>
-        </dependency>
-        <!-- For observability injection into Cerbos decisions -->
-        <dependency>
-            <groupId>io.opentelemetry</groupId>
-            <artifactId>opentelemetry-api</artifactId>
-        </dependency>
-        <!-- Cerbos PDP client: the @Authorize domain PEP delegates decisions
-             to the central Cerbos PDP over gRPC. CerbosAutoConfiguration is
-             @ConditionalOnProperty(labs64.auth.authz.enabled)-guarded. -->
-        <dependency>
-            <groupId>dev.cerbos</groupId>
-            <artifactId>cerbos-sdk-java</artifactId>
-            <version>${jjwt.version}</version>
-        </dependency>
-        <!-- The SDK declares protobuf-java at runtime scope, but its PlanResources
-             filter API exposes protobuf types (Operand oneof) that CerbosPlanMapper
-             walks at compile time. Pinned to the SDK's transitive version. -->
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>${protobuf-java.version}</version>
-        </dependency>
-        <!-- Test support (@WithAuthContext, AuthEnforcementContract, ModulePepHarness) ships in the
-             main jar; the test-only libraries it needs stay optional so consumers never inherit them -->
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-api</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-test</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>provided</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-configuration-processor</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
-
     <build>
-        <testResources>
-            <testResource>
-                <directory>src/test/resources</directory>
-            </testResource>
-            <!-- Shared cross-language behavior vectors -->
-            <testResource>
-                <directory>../test-vectors</directory>
-                <targetPath>test-vectors</targetPath>
-            </testResource>
-        </testResources>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <configuration>
-                    <release>${java.version}</release>
-                </configuration>
-            </plugin>
-        </plugins>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <release>${java.version}</release>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
     </build>
+
     <profiles>
         <profile>
             <id>release</id>
@@ -161,9 +72,7 @@
                         <version>${maven-source-plugin.version}</version>
                         <executions>
                             <execution>
-                                <goals>
-                                    <goal>jar-no-fork</goal>
-                                </goals>
+                                <goals><goal>jar-no-fork</goal></goals>
                             </execution>
                         </executions>
                     </plugin>
@@ -173,9 +82,7 @@
                         <version>${maven-javadoc-plugin.version}</version>
                         <executions>
                             <execution>
-                                <goals>
-                                    <goal>jar</goal>
-                                </goals>
+                                <goals><goal>jar</goal></goals>
                             </execution>
                         </executions>
                         <configuration>
@@ -190,9 +97,7 @@
                             <execution>
                                 <id>sign-artifacts</id>
                                 <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
+                                <goals><goal>sign</goal></goals>
                                 <configuration>
                                     <useAgent>false</useAgent>
                                     <gpgArguments>
@@ -207,12 +112,6 @@
             </build>
         </profile>
 
-        <!--
-          Maven Central publishing via the Sonatype Central Portal. Activated on top
-          of `release` (mvn -P release,central deploy). With extensions=true this
-          plugin takes over the `deploy` phase, so it does NOT double-publish to Nexus.
-          Credentials come from the `ossrh` server in settings.xml (OSS_USER/OSS_PASS).
-        -->
         <profile>
             <id>central</id>
             <build>

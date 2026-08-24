@@ -137,7 +137,7 @@ jobs:
 
       - name: Commit, tag, bump to next snapshot
         run: |
-          git add $(for m in $MODULES; do echo "$m/pom.xml"; done)
+          git add $(for m in $MODULES; do echo "$m/pom.xml"; done) auth-context-java/*/pom.xml
           git commit -m "chore: release commons ${RELEASE_VERSION}"
           git tag -a "${RELEASE_VERSION}" -m "Release ${RELEASE_VERSION}"
           if [[ -z "$NEXT_VERSION" ]]; then
@@ -148,7 +148,7 @@ jobs:
           for m in $MODULES; do
             (cd "$m" && mvn -B -ntp versions:set -DnewVersion="$NEXT_VERSION" -DgenerateBackupPoms=false)
           done
-          git add $(for m in $MODULES; do echo "$m/pom.xml"; done)
+          git add $(for m in $MODULES; do echo "$m/pom.xml"; done) auth-context-java/*/pom.xml
           git commit -m "chore: start ${NEXT_VERSION}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
           git push origin "${RELEASE_VERSION}"

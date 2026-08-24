@@ -10,11 +10,11 @@ build: java install-java openapi queryplan python
 # test all libraries
 test: java openapi queryplan python
 
-# build + test the Java starter
+# build + test the Java auth-context reactor
 java:
     cd auth-context-java && mvn -B -ntp clean test
 
-# install the Java starter into the local Maven repository
+# install the Java auth-context reactor into the local Maven repository
 install-java:
     cd auth-context-java && mvn -B -ntp -DskipTests clean install
 
