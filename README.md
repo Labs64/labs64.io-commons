@@ -15,7 +15,8 @@ Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io)
 
 | Library | Language | Purpose |
 |---|---|---|
-| [`auth-context-spring-boot-starter`](auth-context-java/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireScopes`, outbound propagation, `@WithAuthContext` test support |
+| [`auth-context-core`](auth-context-java/auth-context-core/) | Java 17+ | Dependency-free auth-context model, holder and trusted-header parser |
+| [`auth-context-spring-boot-starter`](auth-context-java/auth-context-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireScopes`, outbound propagation, `@WithAuthContext` test support |
 | [`openapi-spring-boot-starter`](openapi-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Shared springdoc runtime servers, bearer security and canonical OpenAPI metadata configuration |
 | [`authz-queryplan-jpa`](authz-queryplan-jpa/) | Java 17+ / Spring Boot 4 | Translates a Cerbos `PlanResources` query plan into a Spring Data JPA `Specification` (Data PEP) |
 | [`auth-context-python`](auth-context-python/) | Python 3.13+ | Mirrored `AuthContext`, ASGI middleware, FastAPI dependencies, httpx propagation hook, pytest fixture |
@@ -95,6 +96,7 @@ work at all.
 
 | Library | Released? | Consumers currently pin |
 |---|---|---|
+| `auth-context-core` | Not yet | Transitive through `auth-context-spring-boot-starter`; no consumer changes required |
 | `auth-context-spring-boot-starter` | Not yet | `0.1.0-SNAPSHOT` (auditflow-be, checkout-be, payment-gateway-be) |
 | `openapi-spring-boot-starter` | Not yet | `0.1.0-SNAPSHOT` (via `${labs64-openapi.version}`) |
 | `authz-queryplan-jpa` | Not yet (last real release: `0.0.3`, tagged) | `0.1.0-SNAPSHOT` (checkout-be) |
@@ -142,7 +144,8 @@ this custom header-based authorization pipeline.
 CLI:
 
 ```bash
-cd auth-context-java
+just install-java
+cd auth-context-java/auth-context-spring-boot-starter
 mvn -q exec:java \
   -Dexec.mainClass=io.labs64.authcontext.openapi.OpenApiAuthPreprocessorCli \
   -Dexec.args="--input openapi.yaml --openapi-output target/generated/openapi.yaml --cerbos-output target/cerbos --routes-output target/routes.yaml --module commons"

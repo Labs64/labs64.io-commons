@@ -25,7 +25,9 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-c
 
 | Path | What |
 |---|---|
-| `auth-context-java/` | `io.labs64:auth-context-spring-boot-starter` (auth-context + engine-neutral `@Authorize` PEP + Cerbos client) |
+| `auth-context-java/` | Maven reactor for the Java auth-context artifacts |
+| `auth-context-java/auth-context-core/` | `io.labs64:auth-context-core` (dependency-free model, holder and trusted-header parser) |
+| `auth-context-java/auth-context-spring-boot-starter/` | `io.labs64:auth-context-spring-boot-starter` (Spring integration, authorization PEP and Cerbos client) |
 | `auth-context-python/` | `auth-context-python` (package `auth_context`) |
 | `authz-queryplan-jpa/` | `io.labs64:authz-queryplan-jpa` — Cerbos query-plan → JPA Specification (Data PEP) |
 | `auth-policy-cerbos/` | Reference OpenAPI → generated Cerbos policies + truth-table `validate.sh` CI gate |
