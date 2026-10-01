@@ -46,6 +46,15 @@ jobs:
       working-directory: openapi-spring-boot-starter
       maven-goals: test
 
+  schema-generator:
+    uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
+    secrets:
+      L64_PUB_CI_USERNAME: ${{ secrets.L64_PUB_CI_USERNAME }}
+      L64_PUB_CI_PASSWORD: ${{ secrets.L64_PUB_CI_PASSWORD }}
+    with:
+      working-directory: openapi-schema-generator
+      maven-goals: test
+
   authz-queryplan:
     uses: Labs64/labs64.io-workspace/.github/workflows/java-ci.yml@master
     secrets:
@@ -81,7 +90,7 @@ jobs:
   # ── Snapshot publishing: only after ALL tests green, only on master pushes.
   # maven-publish skips silently when the pom version is not a -SNAPSHOT.
   snapshot-auth-context:
-    needs: [auth-context, openapi-starter, authz-queryplan, python, cerbos]
+    needs: [auth-context, openapi-starter, schema-generator, authz-queryplan, python, cerbos]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     permissions:
       contents: write
@@ -92,7 +101,7 @@ jobs:
     secrets: inherit
 
   snapshot-openapi-starter:
-    needs: [auth-context, openapi-starter, authz-queryplan, python, cerbos]
+    needs: [auth-context, openapi-starter, schema-generator, authz-queryplan, python, cerbos]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     permissions:
       contents: write

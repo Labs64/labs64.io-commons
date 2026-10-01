@@ -5,10 +5,10 @@ default:
     @just --list
 
 # build + test all libraries
-build: java install-java openapi queryplan python
+build: java install-java openapi schema-generator queryplan python
 
 # test all libraries
-test: java openapi queryplan python
+test: java openapi schema-generator queryplan python
 
 # build + test the Java auth-context reactor
 java:
@@ -25,6 +25,14 @@ openapi:
 # install the OpenAPI starter into the local Maven repository
 install-openapi:
     cd openapi-spring-boot-starter && mvn -B -ntp -DskipTests clean install
+
+# build + test the OpenAPI schema generator
+schema-generator:
+    cd openapi-schema-generator && mvn -B -ntp clean test
+
+# install the OpenAPI schema generator locally
+install-schema-generator:
+    cd openapi-schema-generator && mvn -B -ntp -DskipTests clean install
 
 # build + test the authz query-plan → JPA translator
 queryplan:

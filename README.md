@@ -18,6 +18,7 @@ Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io)
 | [`auth-context-core`](auth-context-java/auth-context-core/) | Java 17+ | Dependency-free auth-context model, holder and trusted-header parser |
 | [`auth-context-spring-boot-starter`](auth-context-java/auth-context-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireScopes`, outbound propagation, `@WithAuthContext` test support |
 | [`openapi-spring-boot-starter`](openapi-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Shared springdoc runtime servers, bearer security and canonical OpenAPI metadata configuration |
+| [`openapi-schema-generator`](openapi-schema-generator/) | Java 17+ | Extracts versioned JSON Schema documents from explicit OpenAPI 3.1 `$schema` fields |
 | [`authz-queryplan-jpa`](authz-queryplan-jpa/) | Java 17+ / Spring Boot 4 | Translates a Cerbos `PlanResources` query plan into a Spring Data JPA `Specification` (Data PEP) |
 | [`auth-context-python`](auth-context-python/) | Python 3.13+ | Mirrored `AuthContext`, ASGI middleware, FastAPI dependencies, httpx propagation hook, pytest fixture |
 
@@ -60,6 +61,7 @@ pip install "auth-context-python @ git+https://github.com/Labs64/labs64.io-commo
 just build   # build + test all libraries
 just java    # Java only
 just openapi # OpenAPI starter only
+just schema-generator # OpenAPI schema generator only
 just python  # Python only
 ```
 
