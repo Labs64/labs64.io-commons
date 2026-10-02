@@ -1,5 +1,7 @@
 package io.labs64.authcontext.authorization;
 
+import java.time.Duration;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -25,6 +27,18 @@ public class AuthorizationProperties {
     /** Cerbos PDP gRPC address (host:port). In-cluster: cerbos.<ns>.svc.cluster.local:3593. */
     private String pdpAddress = "localhost:3593";
 
+    /**
+     * Deadline of one PDP call. The Cerbos SDK default is 500 ms, which the first call on a cold
+     * JVM exceeds (it also opens the gRPC channel), and every miss is a fail-closed 403.
+     */
+    private Duration timeout = Duration.ofSeconds(2);
+
+    /**
+     * Make one PDP call at startup, before the application reports ready, so the first real
+     * request finds an open channel. A failure is logged and does not stop the application.
+     */
+    private boolean warmUp = true;
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -47,5 +61,21 @@ public class AuthorizationProperties {
 
     public void setPdpAddress(final String pdpAddress) {
         this.pdpAddress = pdpAddress;
+    }
+
+    public Duration getTimeout() {
+        return timeout;
+    }
+
+    public void setTimeout(final Duration timeout) {
+        this.timeout = timeout;
+    }
+
+    public boolean isWarmUp() {
+        return warmUp;
+    }
+
+    public void setWarmUp(final boolean warmUp) {
+        this.warmUp = warmUp;
     }
 }

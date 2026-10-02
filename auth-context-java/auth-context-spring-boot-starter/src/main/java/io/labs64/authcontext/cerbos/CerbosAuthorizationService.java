@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dev.cerbos.sdk.CerbosBlockingClient;
+import dev.cerbos.sdk.CerbosException;
 import dev.cerbos.sdk.CheckResult;
 import dev.cerbos.sdk.PlanResourcesResult;
 import dev.cerbos.sdk.builders.AttributeValue;
@@ -34,6 +35,10 @@ import io.labs64.authcontext.core.AuthHeaders;
  */
 public class CerbosAuthorizationService implements AuthorizationService, QueryPlanner {
 
+    /** gRPC status codes (grpc/grpc status.proto); io.grpc is not on this module's compile classpath. */
+    private static final int GRPC_DEADLINE_EXCEEDED = 4;
+    private static final int GRPC_UNAVAILABLE = 14;
+
     private final AuthorizationProperties properties;
     private final CerbosBlockingClient client;
 
@@ -52,7 +57,7 @@ public class CerbosAuthorizationService implements AuthorizationService, QueryPl
             final ResourceEntity resource) {
         boolean enforced = isEnforcing();
         try {
-            CheckResult result = client.check(principal(context), toCerbosResource(resource), action);
+            CheckResult result = check(principal(context), toCerbosResource(resource), action);
             boolean allowed = result.isAllowed(action);
             // Cerbos surfaces matched-policy detail in its response meta / audit
             // log; reasons stay best-effort empty here — the summary log still
@@ -66,6 +71,30 @@ public class CerbosAuthorizationService implements AuthorizationService, QueryPl
                     resource == null ? "-" : resource.id(), false, enforced, List.of(), e.toString(),
                     context.userId(), context.tenantId(), context.requestId());
         }
+    }
+
+    /**
+     * One retry on a transient transport failure (deadline exceeded or unavailable, e.g. a PDP pod
+     * restarting): a check is a read-only call, so repeating it is safe. Anything else, and a second
+     * failure, propagates and is enforced as a deny.
+     */
+    private CheckResult check(final Principal principal, final Resource resource, final String action) {
+        try {
+            return client.check(principal, resource, action);
+        } catch (RuntimeException e) {
+            if (!isTransient(e)) {
+                throw e;
+            }
+            return client.check(principal, resource, action);
+        }
+    }
+
+    static boolean isTransient(final RuntimeException e) {
+        if (!(e instanceof CerbosException cerbos)) {
+            return false;
+        }
+        int code = cerbos.getStatusCode();
+        return code == GRPC_DEADLINE_EXCEEDED || code == GRPC_UNAVAILABLE;
     }
 
     @Override

@@ -94,6 +94,19 @@ cross-tenant guard per resource type. Use `resource` for the optional SpEL
 reference passed to the resource resolver. Operations without `resourceType` are
 edge-only (coarse reachability).
 
+PDP client settings (`labs64.auth.authz.*`):
+
+| Property | Default | Purpose |
+|---|---|---|
+| `enabled` | `false` | Activates the `@Authorize` interceptor |
+| `mode` | `SHADOW` | `ENFORCE` denies with 403; any PDP error is a deny (fail closed) |
+| `pdp-address` | `localhost:3593` | Cerbos gRPC address, e.g. `labs64io-authz-pdp.<ns>.svc.cluster.local:3593` |
+| `timeout` | `2s` | Deadline of one PDP call. The Cerbos SDK default is 500 ms, which the first call on a cold JVM exceeds because it also opens the channel |
+| `warm-up` | `true` | One PDP call at startup, before the application reports ready, so the first real request finds an open channel. A failure is logged and does not stop startup |
+
+A transient transport failure (deadline exceeded or unavailable, e.g. a PDP pod restarting) is retried once;
+a check is read-only. A second failure, or any other error, is a deny.
+
 ```yaml
 paths:
   /payments/{paymentId}/pay:

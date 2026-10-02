@@ -2,6 +2,10 @@ package io.labs64.authcontext.cerbos;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationRunner;
+
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,6 +17,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import dev.cerbos.sdk.CerbosBlockingClient;
 import dev.cerbos.sdk.CerbosClientBuilder;
+import dev.cerbos.sdk.builders.Principal;
+import dev.cerbos.sdk.builders.Resource;
 
 import io.labs64.authcontext.authorization.AuthorizationDecisionListener;
 import io.labs64.authcontext.authorization.AuthorizationProperties;
@@ -37,10 +43,31 @@ public class CerbosAutoConfiguration {
     /** Coarse interceptors register at order 0 — the domain PEP runs after them. */
     private static final int AUTHZ_INTERCEPTOR_ORDER = 100;
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CerbosAutoConfiguration.class);
+
     @Bean
     @ConditionalOnMissingBean
     public CerbosBlockingClient cerbosBlockingClient(final AuthorizationProperties properties) throws Exception {
-        return new CerbosClientBuilder(properties.getPdpAddress()).withPlaintext().buildBlockingClient();
+        return new CerbosClientBuilder(properties.getPdpAddress()).withPlaintext()
+                .withTimeout(properties.getTimeout()).buildBlockingClient();
+    }
+
+    /**
+     * Opens the gRPC channel before the application is ready (runners run before the readiness
+     * state flips), so the first real decision after a rollout is not the one that connects.
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "labs64.auth.authz", name = "warm-up", havingValue = "true",
+            matchIfMissing = true)
+    public ApplicationRunner cerbosWarmUp(final CerbosBlockingClient client) {
+        return args -> {
+            try {
+                client.check(Principal.newInstance("warm-up", "service"), Resource.newInstance("warm-up", "warm-up"),
+                        "warm-up");
+            } catch (RuntimeException e) {
+                LOGGER.warn("Cerbos PDP warm-up failed; the first decisions may be slow: {}", e.toString());
+            }
+        };
     }
 
     @Bean

@@ -3,6 +3,8 @@ package io.labs64.authcontext.cerbos;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Set;
@@ -10,6 +12,7 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import dev.cerbos.sdk.CerbosBlockingClient;
+import dev.cerbos.sdk.CerbosException;
 import dev.cerbos.sdk.CheckResult;
 
 import io.labs64.authcontext.authorization.AuthorizationDecision;
@@ -79,5 +82,63 @@ class CerbosAuthorizationServiceTest {
 
         assertThat(d.decision()).isEqualTo("deny");
         assertThat(d.enforced()).isFalse();
+    }
+
+    @Test
+    void transientDeadlineIsRetriedOnce() {
+        CerbosBlockingClient client = mock(CerbosBlockingClient.class);
+        CheckResult result = mock(CheckResult.class);
+        when(result.isAllowed("payPayment")).thenReturn(true);
+        when(client.check(any(), any(), any()))
+                .thenThrow(grpcFailure("DEADLINE_EXCEEDED"))
+                .thenReturn(result);
+
+        CerbosAuthorizationService service =
+                new CerbosAuthorizationService(props(AuthorizationProperties.Mode.ENFORCE), client);
+        AuthorizationDecision d = service.decide(ctx("alice", "t_100"), "payPayment", payment("t_100"));
+
+        assertThat(d.decision()).isEqualTo("allow");
+        verify(client, times(2)).check(any(), any(), any());
+    }
+
+    @Test
+    void secondTransientFailureIsStillFailClosed() {
+        CerbosBlockingClient client = mock(CerbosBlockingClient.class);
+        when(client.check(any(), any(), any())).thenThrow(grpcFailure("UNAVAILABLE"));
+
+        CerbosAuthorizationService service =
+                new CerbosAuthorizationService(props(AuthorizationProperties.Mode.ENFORCE), client);
+        AuthorizationDecision d = service.decide(ctx("alice", "t_100"), "payPayment", payment("t_100"));
+
+        assertThat(d.decision()).isEqualTo("error");
+        assertThat(d.allowed()).isFalse();
+        verify(client, times(2)).check(any(), any(), any());
+    }
+
+    @Test
+    void nonTransientFailureIsNotRetried() {
+        CerbosBlockingClient client = mock(CerbosBlockingClient.class);
+        when(client.check(any(), any(), any())).thenThrow(grpcFailure("PERMISSION_DENIED"));
+
+        CerbosAuthorizationService service =
+                new CerbosAuthorizationService(props(AuthorizationProperties.Mode.ENFORCE), client);
+        AuthorizationDecision d = service.decide(ctx("alice", "t_100"), "payPayment", payment("t_100"));
+
+        assertThat(d.decision()).isEqualTo("error");
+        verify(client, times(1)).check(any(), any(), any());
+    }
+
+    /**
+     * A real PDP RPC failure for a gRPC status (DEADLINE_EXCEEDED, UNAVAILABLE, PERMISSION_DENIED).
+     * Built reflectively: io.grpc is on the runtime classpath through the Cerbos SDK, not the compile one.
+     */
+    private static CerbosException grpcFailure(final String statusName) {
+        try {
+            Class<?> status = Class.forName("io.grpc.Status");
+            Object value = status.getField(statusName).get(null);
+            return CerbosException.class.getConstructor(status, Throwable.class).newInstance(value, null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }
