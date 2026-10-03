@@ -57,7 +57,7 @@
         <dependency>
             <groupId>dev.cerbos</groupId>
             <artifactId>cerbos-sdk-java</artifactId>
-            <version>${jjwt.version}</version>
+            <version>${cerbos-sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
