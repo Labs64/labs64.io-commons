@@ -1,5 +1,7 @@
 # --- Java / Maven ---
 target/
+# flatten-maven-plugin output (the pom with ${revision} resolved); regenerated on every build
+.flattened-pom.xml
 *.class
 
 # --- Python ---

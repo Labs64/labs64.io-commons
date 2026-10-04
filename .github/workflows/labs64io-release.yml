@@ -1,154 +1,57 @@
 name: Labs64.IO - Commons - Release
 
-# Releases ALL commons Java modules to Labs64 Nexus in dependency order:
-#   auth-context-java -> openapi-spring-boot-starter -> authz-queryplan-jpa
-# Maven Central publishing (central profile, auth-context only for now) is
-# opt-in via the publish-central input ("later" per spec).
-# After deploying: commit + tag <version>, then bump master to next -SNAPSHOT
-# (auth-context.version property in authz-queryplan-jpa stays at the release).
+# Releases labs64io-parent and ALL commons Java libraries at one version.
+#
+# Trigger: publish a GitHub Release whose tag is the version (X.Y.Z). The tagged commit
+# is built with -Drevision=<tag> and deployed, GPG-signed, to Labs64 Nexus — nothing is
+# committed back, and no pom is edited: poms carry no version of their own.
+#
+# workflow_dispatch replays a release: run it FROM THE TAG (not from a branch).
+#
+# Maven Central publishing is opt-in via the repository variable
+# PUBLISH_MAVEN_CENTRAL=true (needs OSS_USER / OSS_PASS).
 
 on:
+  release:
+    types: [created]
   workflow_dispatch:
-    inputs:
-      release-version:
-        required: true
-        description: The release version X.Y.Z (applied to all modules)
-      next-version:
-        required: false
-        default: ""
-        description: Next dev version (default X.<minor+1>.0-SNAPSHOT)
-      publish-central:
-        type: boolean
-        default: true
-        description: Also publish all modules to Maven Central
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: commons-release
   cancel-in-progress: false
 
-env:
-  MODULES: "auth-context-java openapi-spring-boot-starter authz-queryplan-jpa"
-
 jobs:
-  release:
-    name: Release ${{ github.event.inputs.release-version }}
+  version:
+    name: Resolve release version
     runs-on: ubuntu-latest
-    env:
-      RELEASE_VERSION: ${{ github.event.inputs.release-version }}
-      NEXT_VERSION: ${{ github.event.inputs.next-version }}
-      L64_PUB_CI_USERNAME: ${{ secrets.L64_PUB_CI_USERNAME }}
-      L64_PUB_CI_PASSWORD: ${{ secrets.L64_PUB_CI_PASSWORD }}
-      MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_KEY_PASS }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Validate release version
-        run: |
-          if ! [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid release version '$RELEASE_VERSION' (expected X.Y.Z)"; exit 1
-          fi
-
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: "25"
-          cache: maven
-
-      - name: Configure Git
-        run: |
-          git config user.name "GitHub Actions Bot"
-          git config user.email "netlicensing@labs64.com"
-
-      - name: Prepare Maven settings.xml
-        run: |
-          mkdir -p ~/.m2
-          cat > ~/.m2/settings.xml <<'EOF'
-          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
-            <servers>
-              <server>
-                <id>labs64-nexus</id>
-                <username>${env.L64_PUB_CI_USERNAME}</username>
-                <password>${env.L64_PUB_CI_PASSWORD}</password>
-              </server>
-              <server>
-                <id>labs64-nexus-snapshots</id>
-                <username>${env.L64_PUB_CI_USERNAME}</username>
-                <password>${env.L64_PUB_CI_PASSWORD}</password>
-              </server>
-              <server>
-                <id>ossrh</id>
-                <username>${env.OSS_USER}</username>
-                <password>${env.OSS_PASS}</password>
-              </server>
-            </servers>
-          </settings>
-          EOF
-
-      - name: Check GPG secret
+      - name: Take the version from the tag
+        id: version
         env:
-          GPG_KEY_TMP: ${{ secrets.GPG_KEY }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.event.release.tag_name || github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "$GPG_KEY_TMP" | head -c 40
-
-      - name: Import GPG key
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq pinentry-curses
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
-          echo "pinentry-program $(command -v pinentry-curses)" >> ~/.gnupg/gpg-agent.conf
-          echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
-          gpgconf --kill gpg-agent
-          echo "${{ secrets.GPG_KEY }}" | base64 -d | \
-            gpg --batch --pinentry-mode loopback --passphrase "${{ secrets.GPG_KEY_PASS }}" --import
-
-      - name: Set release versions
-        run: |
-          for m in $MODULES; do
-            (cd "$m" && mvn -B -ntp versions:set -DnewVersion="$RELEASE_VERSION" -DgenerateBackupPoms=false)
-          done
-          (cd authz-queryplan-jpa && mvn -B -ntp versions:set-property \
-            -Dproperty=auth-context.version -DnewVersion="$RELEASE_VERSION" -DgenerateBackupPoms=false)
-
-      - name: Deploy modules to Labs64 Nexus (dependency order)
-        run: |
-          for m in $MODULES; do
-            echo "== deploy $m $RELEASE_VERSION"
-            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release -Dgpg.pinentryMode=loopback -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}")
-          done
-
-      # Central runs AFTER the Nexus deploy so a Central failure never loses
-      # the Nexus release. central-publishing-maven-plugin (extensions=true)
-      # takes over deploy, so this does not re-push to Nexus.
-      - name: Publish modules to Maven Central
-        if: github.event.inputs.publish-central == 'true'
-        env:
-          OSS_USER: ${{ secrets.OSS_USER }}
-          OSS_PASS: ${{ secrets.OSS_PASS }}
-        run: |
-          for m in $MODULES; do
-            echo "== central publish $m $RELEASE_VERSION"
-            (cd "$m" && mvn -B -ntp -s ~/.m2/settings.xml clean deploy -P release,central -Dgpg.pinentryMode=loopback -Dgpg.passphrase="${MAVEN_GPG_PASSPHRASE}")
-          done
-
-      - name: Commit, tag, bump to next snapshot
-        run: |
-          git add $(for m in $MODULES; do echo "$m/pom.xml"; done) auth-context-java/*/pom.xml
-          git commit -m "chore: release commons ${RELEASE_VERSION}"
-          git tag -a "${RELEASE_VERSION}" -m "Release ${RELEASE_VERSION}"
-          if [[ -z "$NEXT_VERSION" ]]; then
-            IFS=. read -r MA MI PA <<< "$RELEASE_VERSION"
-            NEXT_VERSION="${MA}.$((MI+1)).0-SNAPSHOT"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$REF_TYPE" != "tag" ]]; then
+            echo "::error::run this workflow from the release tag, not from a branch"; exit 1
           fi
-          echo "Next dev version: $NEXT_VERSION"
-          for m in $MODULES; do
-            (cd "$m" && mvn -B -ntp versions:set -DnewVersion="$NEXT_VERSION" -DgenerateBackupPoms=false)
-          done
-          git add $(for m in $MODULES; do echo "$m/pom.xml"; done) auth-context-java/*/pom.xml
-          git commit -m "chore: start ${NEXT_VERSION}"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-          git push origin "${RELEASE_VERSION}"
+          if ! [[ "$REF_NAME" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag '$REF_NAME' is not a release version X.Y.Z"; exit 1
+          fi
+          echo "version=$REF_NAME" >> "$GITHUB_OUTPUT"
+
+  release:
+    name: Release ${{ needs.version.outputs.version }}
+    needs: version
+    uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@v1
+    with:
+      working-directory: .
+      mode: release
+      version: ${{ needs.version.outputs.version }}
+      publish-central: ${{ vars.PUBLISH_MAVEN_CENTRAL == 'true' }}
+    secrets: inherit

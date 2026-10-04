@@ -4,11 +4,13 @@ Shared runtime OpenAPI and Swagger UI configuration for Labs64.IO servlet applic
 
 ## Dependency
 
+The version is managed by `io.labs64:labs64io-parent` (see the repository README), so a service
+that inherits it declares the starter without one:
+
 ```xml
 <dependency>
     <groupId>io.labs64</groupId>
     <artifactId>openapi-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
 </dependency>
 ```
 

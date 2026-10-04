@@ -58,7 +58,7 @@ mvn -B -ntp clean package
 Generate directly into a local checkout of `Labs64/labs64.io`:
 
 ```bash
-java -jar target/openapi-schema-generator-0.1.0-SNAPSHOT.jar \
+java -jar target/openapi-schema-generator-0.0.0-SNAPSHOT.jar \
   --input ../labs64.io-payment-gateway/payment-gateway-api/src/main/resources/openapi/openapi-payment-gateway-v1.yaml \
   --output-root ../labs64.io
 ```

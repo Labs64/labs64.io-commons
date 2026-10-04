@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- The single place the ecosystem's Spring Boot line is chosen. Every Labs64.IO Java
+         library and service inherits this POM, so a Boot upgrade is one change here. -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath />
+    </parent>
+
+    <groupId>io.labs64</groupId>
+    <artifactId>labs64io-parent</artifactId>
+    <version>${revision}</version>
+    <packaging>pom</packaging>
+
+    <name>Labs64.IO :: Parent</name>
+    <description>Shared build parent for Labs64.IO Java libraries and services: Spring Boot line, dependency overrides, plugin versions and release rules</description>
+    <url>https://labs64.io</url>
+
+    <properties>
+        <!-- No POM in the ecosystem carries a real version. A release build passes
+             -Drevision=<git tag>, so the tag, the jar and the image always agree;
+             0.0.0-SNAPSHOT only ever means "built from source, unreleased". -->
+        <revision>0.0.0-SNAPSHOT</revision>
+        <!-- Version of the commons libraries managed below. It tracks this POM's own
+             version (flatten-maven-plugin writes the literal value into the published
+             POM), so a consumer pins all of commons by choosing its parent version. -->
+        <labs64-commons.version>${revision}</labs64-commons.version>
+
+        <!-- Services run on Java 25; libraries override this to 17 so any consumer can use them. -->
+        <java.version>25</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- Security overrides ahead of Spring Boot 4.1.1's BOM (Boot 4.1.2 is expected to absorb
+             them; drop these properties then). Jackson is deliberately moved through its two BOM
+             properties rather than by pinning single artifacts: Boot manages the Jackson 3 line
+             (jackson-bom) and the Jackson 2 annotations line (jackson-2-bom) as a coordinated
+             pair, and overriding tools.jackson.core:jackson-databind alone left
+             jackson-annotations behind — a request-time NoClassDefFoundError
+             (JsonApplyView) that crash-looped pods. Stay on the Jackson minor line Boot ships
+             (3.1.x with 2.21.x). Fixes: Tomcat CVE-2026-65905/65182/68525, Jackson
+             CVE-2026-89425/89407/91777/91776/68497, RabbitMQ amqp-client
+             CVE-2026-69219/69220/63337/75516. -->
+        <!-- renovate: datasource=maven depName=tools.jackson:jackson-bom -->
+        <jackson-bom.version>3.1.7</jackson-bom.version>
+        <!-- renovate: datasource=maven depName=com.fasterxml.jackson:jackson-bom -->
+        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+        <!-- renovate: datasource=maven depName=org.apache.tomcat.embed:tomcat-embed-core -->
+        <tomcat.version>11.0.26</tomcat.version>
+        <!-- renovate: datasource=maven depName=io.netty:netty-bom -->
+        <netty.version>4.2.18.Final</netty.version>
+        <!-- renovate: datasource=maven depName=com.rabbitmq:amqp-client -->
+        <rabbit-amqp-client.version>5.37.0</rabbit-amqp-client.version>
+
+        <!-- Third-party versions shared by more than one module. The `renovate:` annotations
+             cover properties no dependency in THIS repository references (the modules that
+             inherit this POM use them), which Renovate's Maven manager cannot otherwise see. -->
+        <!-- renovate: datasource=maven depName=org.apache.commons:commons-lang3 -->
+        <commons-lang3.version>3.21.0</commons-lang3.version>
+        <!-- renovate: datasource=maven depName=com.fasterxml.jackson.datatype:jackson-datatype-jsr310 -->
+        <jackson-datatype.version>2.22.3</jackson-datatype.version>
+        <!-- renovate: datasource=maven depName=net.logstash.logback:logstash-logback-encoder -->
+        <logstash.version>9.0</logstash.version>
+        <!-- renovate: datasource=maven depName=org.projectlombok:lombok -->
+        <lombok.version>1.18.48</lombok.version>
+        <!-- renovate: datasource=maven depName=org.projectlombok:lombok-mapstruct-binding -->
+        <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
+        <!-- renovate: datasource=maven depName=org.mapstruct:mapstruct -->
+        <mapstruct.version>1.7.0.Beta2</mapstruct.version>
+        <!-- renovate: datasource=maven depName=org.openapitools:jackson-databind-nullable -->
+        <openapitools.version>0.2.12</openapitools.version>
+        <protobuf-java.version>4.36.2</protobuf-java.version>
+        <springdoc.version>3.1.1</springdoc.version>
+
+        <!-- Plugins -->
+        <!-- renovate: datasource=maven depName=org.codehaus.mojo:build-helper-maven-plugin -->
+        <build-helper-maven-plugin.version>3.6.2</build-helper-maven-plugin.version>
+        <central-publishing-maven-plugin.version>0.11.0</central-publishing-maven-plugin.version>
+        <!-- renovate: datasource=maven depName=org.codehaus.mojo:exec-maven-plugin -->
+        <exec-maven-plugin.version>3.6.4</exec-maven-plugin.version>
+        <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
+        <!-- renovate: datasource=maven depName=org.apache.maven.plugins:maven-compiler-plugin -->
+        <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
+        <!-- renovate: datasource=maven depName=org.apache.maven.plugins:maven-dependency-plugin -->
+        <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
+        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+        <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
+        <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
+        <!-- renovate: datasource=maven depName=org.apache.maven.plugins:maven-shade-plugin -->
+        <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
+        <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
+        <!-- renovate: datasource=maven depName=org.openapitools:openapi-generator-maven-plugin -->
+        <openapi-generator-maven-plugin.version>7.25.0</openapi-generator-maven-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.labs64</groupId>
+                <artifactId>auth-context-core</artifactId>
+                <version>${labs64-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.labs64</groupId>
+                <artifactId>auth-context-spring-boot-starter</artifactId>
+                <version>${labs64-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.labs64</groupId>
+                <artifactId>authz-queryplan-jpa</artifactId>
+                <version>${labs64-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.labs64</groupId>
+                <artifactId>openapi-spring-boot-starter</artifactId>
+                <version>${labs64-commons.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.labs64</groupId>
+                <artifactId>openapi-schema-generator</artifactId>
+                <version>${labs64-commons.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <distributionManagement>
+        <repository>
+            <id>labs64-nexus</id>
+            <name>Labs64 Nexus Releases</name>
+            <url>https://nexus.labs64.com/repository/labs64.io-releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>labs64-nexus-snapshots</id>
+            <name>Labs64 Nexus Snapshots</name>
+            <url>https://nexus.labs64.com/repository/labs64.io-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>${maven-enforcer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>enforce-maven</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <version>3.6.3</version>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <version>${java.version}</version>
+                                </requireJavaVersion>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <!-- A release (-Drevision=<tag>) may only be built from released inputs:
+                         a -SNAPSHOT parent or dependency is a moving target, so the same tag
+                         could never be rebuilt. Inert for ordinary -SNAPSHOT builds. -->
+                    <execution>
+                        <id>enforce-release-inputs</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireReleaseDeps>
+                                    <onlyWhenRelease>true</onlyWhenRelease>
+                                    <message>A release build must not depend on -SNAPSHOT artifacts. Point the parent / dependency at a released version first.</message>
+                                </requireReleaseDeps>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Installs and deploys POMs with ${revision} replaced by the literal version;
+                 without it a consumer could not resolve this parent or its children. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>flatten-clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Library release artifacts: sources, javadoc and signatures. -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>${maven-source-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jar-no-fork</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>${maven-javadoc-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <doclint>all,-missing</doclint>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>${maven-gpg-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                                <configuration>
+                                    <useAgent>false</useAgent>
+                                    <gpgArguments>
+                                        <arg>--pinentry-mode</arg>
+                                        <arg>loopback</arg>
+                                    </gpgArguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>central</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>${central-publishing-maven-plugin.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>ossrh</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>published</waitUntil>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

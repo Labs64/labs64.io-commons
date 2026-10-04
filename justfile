@@ -5,42 +5,22 @@ default:
     @just --list
 
 # build + test all libraries
-build: java install-java openapi schema-generator queryplan python
+build: java install-java python
 
 # test all libraries
-test: java openapi schema-generator queryplan python
+test: java python
 
-# build + test the Java auth-context reactor
+# build + test every Java library (one reactor: labs64io-parent, then the libraries in dependency order)
 java:
-    cd auth-context-java && mvn -B -ntp clean test
+    mvn -B -ntp clean verify
 
-# install the Java auth-context reactor into the local Maven repository
+# install labs64io-parent and every Java library into the local Maven repository (as 0.0.0-SNAPSHOT)
 install-java:
-    cd auth-context-java && mvn -B -ntp -DskipTests clean install
+    mvn -B -ntp -DskipTests clean install
 
-# build + test the OpenAPI starter
-openapi:
-    cd openapi-spring-boot-starter && mvn -B -ntp clean test
-
-# install the OpenAPI starter into the local Maven repository
-install-openapi:
-    cd openapi-spring-boot-starter && mvn -B -ntp -DskipTests clean install
-
-# build + test the OpenAPI schema generator
-schema-generator:
-    cd openapi-schema-generator && mvn -B -ntp clean test
-
-# install the OpenAPI schema generator locally
-install-schema-generator:
-    cd openapi-schema-generator && mvn -B -ntp -DskipTests clean install
-
-# build + test the authz query-plan → JPA translator
-queryplan:
-    cd authz-queryplan-jpa && mvn -B -ntp clean test
-
-# install the query-plan translator into the local Maven repository
-install-queryplan:
-    cd authz-queryplan-jpa && mvn -B -ntp -DskipTests clean install
+# build + test one Java library and whatever it depends on, e.g. `just java-module authz-queryplan-jpa`
+java-module module:
+    mvn -B -ntp -pl {{module}} -am clean verify
 
 # create the Python venv with dev dependencies
 python-venv:

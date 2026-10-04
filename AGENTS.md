@@ -25,6 +25,8 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-c
 
 | Path | What |
 |---|---|
+| `pom.xml` | Build aggregator for all Java libraries (never published; nothing inherits from it) |
+| `labs64io-parent/` | `io.labs64:labs64io-parent` — parent POM of every Labs64.IO Java library **and service**: Spring Boot line, BOM overrides, shared versions, release rules |
 | `auth-context-java/` | Maven reactor for the Java auth-context artifacts |
 | `auth-context-java/auth-context-core/` | `io.labs64:auth-context-core` (dependency-free model, holder and trusted-header parser) |
 | `auth-context-java/auth-context-spring-boot-starter/` | `io.labs64:auth-context-spring-boot-starter` (Spring integration, authorization PEP and Cerbos client) |
@@ -39,14 +41,14 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-c
 | Task | Command |
 |---|---|
 | Build + test everything | `just build` |
-| Java tests | `cd auth-context-java && mvn test` |
-| OpenAPI starter tests | `cd openapi-spring-boot-starter && mvn test` |
+| Java tests (all libraries) | `just java` (`mvn verify` at the repo root) |
+| One Java library + its dependencies | `just java-module <dir>` (e.g. `openapi-spring-boot-starter`) |
 | Python tests | `cd auth-context-python && .venv/bin/pytest` (after `just python-venv`) |
 | Install Java lib locally | `just install-java` |
 | Cerbos policy + equivalence gate | `just cerbos` (runs `auth-policy-cerbos/validate.sh` via Docker) |
 
 ## Conventions
 
-- Java 17 bytecode target (consumers run 17+), Spring Boot 4.x parent.
+- Java 17 bytecode target (consumers run 17+). The Spring Boot line and every shared version are declared once, in `labs64io-parent/pom.xml` — never re-pin them in a library or a service.
 - Python ≥ 3.13, no runtime deps, `pyproject.toml` packaging.
-- Versioning: bump both libraries together; consumers consume from Labs64 Nexus and git+https.
+- Versioning: no pom carries a version (`<version>${revision}</version>`, default `0.0.0-SNAPSHOT`). All Java artifacts release together at the version of the GitHub Release tag (`labs64io-release.yml`); never edit a version into a pom. Consumers pin a released `labs64io-parent` — a release build fails on `-SNAPSHOT` inputs. Python is consumed via git+https.

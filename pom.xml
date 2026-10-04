@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Build aggregator only: it lets one `mvn` invocation build, install or deploy every
+         commons Java library in dependency order at one version. Nothing inherits from it
+         (the libraries inherit labs64io-parent) and it is never published. -->
+    <parent>
+        <groupId>io.labs64</groupId>
+        <artifactId>labs64io-parent</artifactId>
+        <version>${revision}</version>
+        <relativePath>labs64io-parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>labs64io-commons</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Labs64.IO :: Commons</name>
+    <description>Aggregator for the Labs64.IO commons Java libraries</description>
+
+    <modules>
+        <module>labs64io-parent</module>
+        <module>auth-context-java</module>
+        <module>openapi-spring-boot-starter</module>
+        <module>authz-queryplan-jpa</module>
+        <module>openapi-schema-generator</module>
+    </modules>
+
+    <properties>
+        <maven.install.skip>true</maven.install.skip>
+        <maven.deploy.skip>true</maven.deploy.skip>
+    </properties>
+</project>

@@ -15,6 +15,7 @@ Shared, cross-service libraries for the [Labs64.IO Ecosystem](https://labs64.io)
 
 | Library | Language | Purpose |
 |---|---|---|
+| [`labs64io-parent`](labs64io-parent/) | Maven POM | Build parent of every Labs64.IO Java library and service: the Spring Boot line, BOM security overrides, shared dependency/plugin versions, commons library versions and the release rules |
 | [`auth-context-core`](auth-context-java/auth-context-core/) | Java 17+ | Dependency-free auth-context model, holder and trusted-header parser |
 | [`auth-context-spring-boot-starter`](auth-context-java/auth-context-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Trusted gateway auth-context (`X-Auth-*`) parsing, fail-closed enforcement, `@RequireScopes`, outbound propagation, `@WithAuthContext` test support |
 | [`openapi-spring-boot-starter`](openapi-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Shared springdoc runtime servers, bearer security and canonical OpenAPI metadata configuration |
@@ -30,24 +31,37 @@ Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Sc
 
 **Java:**
 
-Published to Labs64 Nexus (snapshots and releases both). Ensure your `settings.xml` or CI
-environment is configured to resolve from the Labs64 Maven repositories.
-
-**Current status: pre-release.** Every Java library here is still on its first development line
-(`0.1.0-SNAPSHOT`) — no `0.1.0` (or any other) stable version has been cut yet, and every current
-ecosystem consumer (`labs64.io-auditflow`, `labs64.io-checkout`, `labs64.io-payment-gateway`)
-depends on the snapshot for exactly that reason. A snapshot is a moving target — Nexus lets it be
-overwritten at any time — so no downstream service should stay pinned to one longer than
-necessary. See [Release process](#release-process) below for cutting the first stable release and
-[Where each library actually is](#where-each-library-actually-is) for what changes once one exists.
+Published to Labs64 Nexus. A service inherits `labs64io-parent`; that one version pins the Spring
+Boot line, the shared third-party versions **and** every commons library, so the libraries
+themselves are declared without a version:
 
 ```xml
-<dependency>
+<parent>
     <groupId>io.labs64</groupId>
-    <artifactId>auth-context-spring-boot-starter</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
+    <artifactId>labs64io-parent</artifactId>
+    <version>X.Y.Z</version>
+    <relativePath />
+</parent>
+
+<dependencies>
+    <dependency>
+        <groupId>io.labs64</groupId>
+        <artifactId>auth-context-spring-boot-starter</artifactId>
+    </dependency>
+</dependencies>
+
+<!-- Needed in the consumer too: Maven must reach Labs64 Nexus to find the parent itself. -->
+<repositories>
+    <repository>
+        <id>labs64-nexus</id>
+        <url>https://nexus.labs64.com/repository/labs64.io-releases/</url>
+    </repository>
+</repositories>
 ```
+
+Pin a **released** version. `0.0.0-SNAPSHOT` (what `master` builds as) is a moving target: use it
+only while developing against unreleased commons, and move back to a release before releasing the
+service — a release build refuses `-SNAPSHOT` inputs (`requireReleaseDeps` in `labs64io-parent`).
 
 **Python:**
 
@@ -58,55 +72,38 @@ pip install "auth-context-python @ git+https://github.com/Labs64/labs64.io-commo
 ## Development
 
 ```bash
-just build   # build + test all libraries
-just java    # Java only
-just openapi # OpenAPI starter only
-just schema-generator # OpenAPI schema generator only
-just python  # Python only
+just build        # build + test all libraries
+just java         # Java only (one reactor: labs64io-parent, then every library)
+just java-module authz-queryplan-jpa   # one library and what it depends on
+just python       # Python only
 ```
 
-Local Java consumption: `just install-java` installs `0.1.0-SNAPSHOT` into the local Maven repository.
+Local Java consumption: `just install-java` installs `labs64io-parent` and every library as
+`0.0.0-SNAPSHOT` into the local Maven repository.
 
 ## Release process
 
-`.github/workflows/labs64io-ci.yml` publishes both automatically and on demand, via the shared
-`maven-publish.yml` reusable workflow (`labs64.io-workspace`):
+All Java artifacts here — `labs64io-parent` and every library — share **one version line** and are
+always released together.
 
-- **Snapshot — automatic.** Every push to `master` deploys the current `-SNAPSHOT` for
-  `auth-context-java` and `openapi-spring-boot-starter` to the Nexus snapshot repository (silently
-  skipped if the pom version is not a `-SNAPSHOT` — a release version is never accidentally
-  re-pushed there). `authz-queryplan-jpa` follows once `auth-context`'s snapshot publish
-  completes.
-- **Release — manual, `workflow_dispatch` only.** Trigger `labs64io-ci.yml` from the Actions tab
-  and fill in whichever of `release-auth-context-version` / `release-openapi-starter-version` /
-  `release-authz-queryplan-version` you're cutting (`X.Y.Z`; leave the others blank to skip them).
-  Each does, for that one library: `versions:set` to the given version, a GPG-signed deploy to the
-  Nexus release repository, a commit + git tag, then a bump back to the next `-SNAPSHOT` — pushed
-  straight to `master`.
+No pom carries a version: each declares `<version>${revision}</version>`, and `revision` defaults
+to `0.0.0-SNAPSHOT` ("built from source, unreleased"). The release version is the git tag.
 
-  `authz-queryplan-jpa` pins its *own* dependency on auth-context at the **latest released**
-  version (`<auth-context.version>` in its `pom.xml`), deliberately never the in-repo snapshot —
-  see that property's comment. After releasing `auth-context-java`, bump that property to the new
-  version in a follow-up commit before releasing `authz-queryplan-jpa`, so it isn't left building
-  against a now-superseded release.
+- **Snapshot — automatic.** Every green push to `master` deploys `0.0.0-SNAPSHOT` of the whole
+  reactor to the Nexus snapshot repository (`labs64io-ci.yml`).
+- **Release — publish a GitHub Release** whose tag is the version (`X.Y.Z`).
+  `labs64io-release.yml` builds the tagged commit with `-Drevision=<tag>` and deploys it,
+  GPG-signed, to the Nexus release repository through the shared `maven-publish.yml` reusable
+  workflow (`labs64.io-workspace`). Nothing is committed back and no pom is edited.
+  To replay a release, run the workflow manually **from the tag**.
+- **Maven Central** is opt-in: set the repository variable `PUBLISH_MAVEN_CENTRAL=true`
+  (needs `OSS_USER` / `OSS_PASS`).
+
+After a release, each consumer moves its `labs64io-parent` version to it (Renovate opens that PR;
+`payment-gateway-api` additionally carries `openapi-schema-generator.version`).
 
 Requires repository secrets `L64_PUB_CI_USERNAME` / `L64_PUB_CI_PASSWORD` (Nexus) and `GPG_KEY` /
-`GPG_KEY_PASS` (release signing) — already configured for this repository's snapshot publishing to
-work at all.
-
-### Where each library actually is
-
-| Library | Released? | Consumers currently pin |
-|---|---|---|
-| `auth-context-core` | Not yet | Transitive through `auth-context-spring-boot-starter`; no consumer changes required |
-| `auth-context-spring-boot-starter` | Not yet | `0.1.0-SNAPSHOT` (auditflow-be, checkout-be, payment-gateway-be) |
-| `openapi-spring-boot-starter` | Not yet | `0.1.0-SNAPSHOT` (via `${labs64-openapi.version}`) |
-| `authz-queryplan-jpa` | Not yet (last real release: `0.0.3`, tagged) | `0.1.0-SNAPSHOT` (checkout-be) |
-| `auth-context-python` | git-ref install only, no package index | — |
-
-Once a Java library's first stable release is cut, update every consumer's pinned version away
-from the snapshot in the same change — a released library with a downstream still pinned to its
-snapshot is the exact state this section exists to avoid recreating.
+`GPG_KEY_PASS` (release signing).
 
 ## OpenAPI Auth Policy Generation
 
