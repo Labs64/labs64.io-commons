@@ -55,7 +55,9 @@ jobs:
   # labs64io-release.yml (a GitHub Release), never from here.
   snapshot:
     needs: [java, python, cerbos]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    # A manual run on master publishes too (how the very first snapshot is bootstrapped,
+    # or a failed publish is retried). Never from a branch or a pull request.
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/master'
     uses: Labs64/labs64.io-workspace/.github/workflows/maven-publish.yml@v1
     with:
       working-directory: .
