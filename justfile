@@ -1,40 +1,40 @@
 # Labs64.IO :: Commons
 
-# print available recipes
+# List available recipes
 default:
     @just --list
 
-# build + test all libraries
+# Build and test the Java libraries, install them locally, then test the Python library
 build: java install-java python
 
-# test all libraries
+# Test the Java and Python libraries
 test: java python
 
-# build + test every Java library (one reactor: labs64io-parent, then the libraries in dependency order)
+# Build and test all Java libraries in dependency order
 java:
     mvn -B -ntp clean verify
 
-# install labs64io-parent and every Java library into the local Maven repository (as 0.0.0-SNAPSHOT)
+# Install the parent POM and all Java libraries into the local Maven repository as 0.0.0-SNAPSHOT
 install-java:
     mvn -B -ntp -DskipTests clean install
 
-# build + test one Java library and whatever it depends on, e.g. `just java-module authz-queryplan-jpa`
+# Build and test one Java library together with the modules it depends on
 java-module module:
     mvn -B -ntp -pl {{module}} -am clean verify
 
-# create the Python venv with dev dependencies
+# Create the Python virtualenv and install the dev dependencies
 python-venv:
     cd auth-context-python && python3 -m venv .venv && .venv/bin/pip install -q -e ".[dev]"
 
-# test the Python library (creates the venv when missing)
+# Test the Python library, creating the virtualenv first if it is missing
 python:
     cd auth-context-python && test -d .venv || just python-venv
     cd auth-context-python && .venv/bin/pytest -q
 
-# regenerate the reference Cerbos policy set from reference-openapi.yaml
+# Regenerate the reference Cerbos policies from reference-openapi.yaml
 generate-cerbos:
     ./auth-policy-cerbos/generate.sh
 
-# Cerbos compile + decision-equivalence truth-table gate (requires Docker)
+# Compile the Cerbos policies and check their decisions against the truth table
 cerbos:
     ./auth-policy-cerbos/validate.sh
