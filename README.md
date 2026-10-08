@@ -31,7 +31,7 @@ Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Sc
 
 **Java:**
 
-Published to Labs64 Nexus. A service inherits `labs64io-parent`; that one version pins the Spring
+Published to Maven Central under `io.labs64`; no repository configuration is needed. A service inherits `labs64io-parent`; that one version pins the Spring
 Boot line, the shared third-party versions **and** every commons library, so the libraries
 themselves are declared without a version:
 
@@ -49,14 +49,6 @@ themselves are declared without a version:
         <artifactId>auth-context-spring-boot-starter</artifactId>
     </dependency>
 </dependencies>
-
-<!-- Needed in the consumer too: Maven must reach Labs64 Nexus to find the parent itself. -->
-<repositories>
-    <repository>
-        <id>labs64-nexus</id>
-        <url>https://nexus.labs64.com/repository/labs64.io-releases/</url>
-    </repository>
-</repositories>
 ```
 
 Pin a **released** version. `0.0.0-SNAPSHOT` (what `master` builds as) is a moving target: use it
