@@ -6,22 +6,33 @@
 [![CI](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml/badge.svg)](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml)
 [![Maven Central (auth-context)](https://img.shields.io/maven-central/v/io.labs64/auth-context-spring-boot-starter?label=Maven%20Central)](https://central.sonatype.com/artifact/io.labs64/auth-context-spring-boot-starter)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/development/contributing/)
+[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/development/contributing.html)
 
 <p align="center"><img src="docs/assets/commons-hero.svg" alt="Commons: Java services, Python services, the API gateway and build pipelines share one set of libraries: trusted auth context, OpenAPI starter, query-plan translation and policy generation." width="880"></p>
 
-[**Get started**](#get-started) · [Features](#features) · [Architecture](#architecture) · [AI agents](#using-commons-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/development/contributing/) · [labs64.io](https://labs64.io)
+[**Get started**](#get-started) · [Features](#features) · [Architecture](#architecture) · [AI agents](#using-commons-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/development/contributing.html) · [labs64.io](https://labs64.io)
 
 > [!NOTE]
 > Consume Commons through the `labs64io-parent` POM: one version pins the Spring Boot line, the shared dependency versions **and** every library, so libraries are declared without a version.
 
 ## Why Commons?
 
-Services that each re-implement tenant headers, OpenAPI metadata and authorization plumbing drift apart, and the differences are where bugs and security holes live. Commons is that plumbing, written once:
+Services that each re-implement tenant headers, OpenAPI metadata and authorization plumbing drift apart, and the differences are exactly where bugs and security holes live. Commons is that plumbing, written and tested once.
 
 1. **One trust contract.** Every service parses the same `X-Auth-*` headers the same way, in Java and in Python, pinned to identical behaviour by shared test vectors.
 2. **One build parent.** `labs64io-parent` carries the Spring Boot line, security overrides and release rules for every Java module.
 3. **Authorization that follows the contract.** Policies and routes are generated from OpenAPI; the Data PEP turns a Cerbos query plan into a JPA `Specification`.
+
+**A good fit if**
+
+- You build Java (Spring Boot) or Python services that sit behind the Labs64.IO API Gateway.
+- You want your service to parse the trusted identity headers exactly as the rest of the platform does.
+- You generate authorization policies from your OpenAPI contract.
+
+**Probably not what you need if**
+
+- Your services are not behind the Labs64.IO gateway: the auth-context libraries assume its header contract.
+- You need a general-purpose utility library: these are purpose-built platform libraries.
 
 ## Get started
 
@@ -46,16 +57,17 @@ Not sure? Start with **2** to add a library to your service, or **1** to see the
 
 ### 1. `install.sh`: the quick ecosystem start
 
-Commons is consumed, not installed, so the quickest way to see it at work is the platform built on it. One script installs the gateway, AuditFlow and Payment Gateway on any Kubernetes cluster, then proves it with a real request. No cluster? A throwaway one on your laptop is enough:
+Commons is consumed, not installed, so the quickest way to see it at work is the platform built on it. One script installs the gateway, AuditFlow and Payment Gateway on any Kubernetes cluster, then proves it with a real request.
 
 ```bash
-k3d cluster create labs64io-demo -p "8000:80@loadbalancer" --k3s-arg "--disable=traefik@server:0"   # optional
+# No cluster yet? A throwaway one needs only Docker and k3d:
+k3d cluster create labs64io-demo -p "8000:80@loadbalancer" --k3s-arg "--disable=traefik@server:0"
 
 curl -fsSL https://raw.githubusercontent.com/Labs64/labs64.io-helm-charts/master/install.sh -o install.sh
 bash install.sh
 ```
 
-Press Enter three times to take the defaults. You finish with a gateway you can `curl`, interactive API docs and a working token flow:
+Press Enter three times to take the defaults. A few minutes later you should see:
 
 ```text
   PASS  Obtained a demo access token from mock-oidc
@@ -66,7 +78,7 @@ Press Enter three times to take the defaults. You finish with a gateway you can 
    API docs:  http://localhost:8000/swagger-ui/
 ```
 
-Every service in that stack inherits `labs64io-parent` and parses the trusted headers with the auth-context starter. The same script later runs `status`, `stop`, `start` and `uninstall`. This is an evaluation install with a demo identity provider: keep it on a local or private cluster. Details: [Quickstart](https://labs64.io/docs/getting-started/quickstart/) · [`install.sh`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/install.sh).
+Every service in that stack inherits `labs64io-parent` and parses the trusted headers with the auth-context starter. The same script later runs `status`, `stop`, `start` and `uninstall`. This is an evaluation install with a demo identity provider: keep it on a local or private cluster. Details: [Quickstart](https://labs64.io/docs/getting-started/quickstart.html) · [`install.sh`](https://github.com/Labs64/labs64.io-helm-charts/blob/master/install.sh).
 
 ### 2. Maven and pip: use it in your service
 
@@ -116,18 +128,20 @@ mvn -B verify                                   # build and test every Java libr
 cd auth-context-python && pip install -e . pytest && pytest   # the Python library
 ```
 
-[`AGENTS.md`](AGENTS.md) describes the layout, the release rules and where each library lives; the [Contributing guide](https://labs64.io/docs/development/contributing/) covers the workflow.
+[`AGENTS.md`](AGENTS.md) describes the layout, the release rules and where each library lives; the [Contributing guide](https://labs64.io/docs/development/contributing.html) covers the workflow.
 
 ### Where next?
 
-Everything below is in the [Commons documentation](https://labs64.io/docs/development/contributing/):
+Everything below is in the [Commons documentation](https://labs64.io/docs/development/contributing.html):
 
 | I want to… | Read |
 |---|---|
 | Understand the trusted header contract | [Auth context integration](https://github.com/Labs64/labs64.io-commons/blob/master/auth-context-java/INTEGRATION.md) |
-| See how a module uses the libraries | [Contributing guide](https://labs64.io/docs/development/contributing/) |
+| See how a module uses the libraries | [Contributing guide](https://labs64.io/docs/development/contributing.html) |
 | Release a library | [`AGENTS.md`](AGENTS.md) |
-| Compare all the ways to run Labs64.IO | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path/) |
+| Compare all the ways to run Labs64.IO | [Choose a deployment path](https://labs64.io/docs/getting-started/choose-a-deployment-path.html) |
+
+Something not working? [Troubleshooting your first run](https://labs64.io/docs/getting-started/troubleshooting.html) covers the usual suspects, and you are always welcome to [open an issue](https://github.com/Labs64/labs64.io-commons/issues).
 
 ## Features
 
@@ -160,6 +174,21 @@ Everything below is in the [Commons documentation](https://labs64.io/docs/develo
           both parse the same X-Auth-* contract, pinned by test-vectors/
 ```
 
+## What is in the box
+
+| Library | Language | What it gives you |
+|---|---|---|
+| [`labs64io-parent`](labs64io-parent/) | Maven POM | The build parent: Spring Boot line, security overrides, shared versions and release rules in one version |
+| [`auth-context-core`](auth-context-java/auth-context-core/) | Java 17+ | The identity model, holder and trusted-header parser, with no dependencies |
+| [`auth-context-spring-boot-starter`](auth-context-java/auth-context-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Fail-closed header enforcement, `@RequireScopes`, outbound propagation and test support |
+| [`auth-context-python`](auth-context-python/) | Python 3.13+ | The same contract for ASGI and FastAPI services, with an httpx hook and pytest fixture |
+| [`openapi-spring-boot-starter`](openapi-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Shared springdoc servers, bearer security and canonical OpenAPI metadata |
+| [`openapi-schema-generator`](openapi-schema-generator/) | Java 17+ | Versioned JSON Schema documents from OpenAPI 3.1 |
+| [`authz-queryplan-jpa`](authz-queryplan-jpa/) | Java 17+ / Spring Boot 4 | Turns a Cerbos query plan into a JPA `Specification` (Data PEP) |
+| [`auth-policy-cerbos`](auth-policy-cerbos/) | Shell + OpenAPI | The toolkit that derives the central policy engine's policies from your contract |
+
+The Java and Python implementations are pinned to identical behaviour by the shared vectors in [`test-vectors/`](test-vectors/).
+
 ## Using Commons with AI agents
 
 Commons is what makes every Labs64.IO service behave the same, which is what lets an agent trust one mental model across the platform.
@@ -190,11 +219,11 @@ Commons is one module of the [Labs64.IO Ecosystem](https://labs64.io); [every mo
 
 ## Contributing
 
-Contributions of all sizes are welcome. Fork, branch, run the checks described in [`AGENTS.md`](AGENTS.md), and open a pull request. If you are unsure whether something fits, open an issue first.
+We would love your help. A change to a shared library reaches every service, so tests (and, for the header contract, shared test vectors) are not optional. Fork the repository, make your change on a branch, run the checks described in [`AGENTS.md`](AGENTS.md) and open a pull request. Not sure whether an idea fits? Open an issue first and we will talk it through; that is a perfectly good way to start.
 
 ## License
 
-The core of the *Labs64.IO Ecosystem* is entirely open source and free forever. Community modules are licensed under [Apache License 2.0](LICENSE).
+Everything in this repository is open source under the [Apache License 2.0](LICENSE): you can use it, change it and ship it commercially. The core of the *Labs64.IO Ecosystem* is free forever; community modules are Apache-2.0 licensed.
 
 ---
 
