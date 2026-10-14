@@ -1,164 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" role="img" aria-labelledby="t d">
+<svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" width="1200" height="640" role="img" aria-labelledby="t d">
 <title id="t">Labs64.IO Commons</title>
-<desc id="d">Java services, Python services, the API gateway and build pipelines share one set of libraries: trusted auth context, OpenAPI starter, query-plan translation and policy generation.</desc>
+<desc id="d">The same payments:read rule written three ways, as a Java annotation, a Python decorator and a generated Cerbos policy, each returning the same ALLOW from one set of shared test vectors.</desc>
 <defs>
-  <radialGradient id="g1" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#E14817" stop-opacity=".45"/><stop offset="1" stop-color="#E14817" stop-opacity="0"/></radialGradient>
-  <radialGradient id="g2" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#F2951C" stop-opacity=".22"/><stop offset="1" stop-color="#F2951C" stop-opacity="0"/></radialGradient>
-  <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#F8EDE5" stroke-opacity=".06"/></pattern>
-  <filter id="glow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  <clipPath id="win"><rect width="1200" height="640" rx="18"/></clipPath>
-  <path id="pi0" d="M280,300 C355,300 355,355 430,355"/>
-  <path id="pi1" d="M280,370 C355,370 355,385 430,385"/>
-  <path id="pi2" d="M280,440 C355,440 355,425 430,425"/>
-  <path id="pi3" d="M280,510 C355,510 355,455 430,455"/>
-  <path id="po0" d="M770,355 C845,355 845,300 920,300"/>
-  <path id="po1" d="M770,385 C845,385 845,370 920,370"/>
-  <path id="po2" d="M770,425 C845,425 845,440 920,440"/>
-  <path id="po3" d="M770,455 C845,455 845,510 920,510"/>
-  <style>
+<radialGradient id="hg1" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#E14817" stop-opacity=".45"/><stop offset="1" stop-color="#E14817" stop-opacity="0"/></radialGradient>
+<radialGradient id="hg2" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#F2951C" stop-opacity=".22"/><stop offset="1" stop-color="#F2951C" stop-opacity="0"/></radialGradient>
+<pattern id="hgrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#F8EDE5" stroke-opacity=".06"/></pattern>
+<filter id="hglow" x="-200%" y="-200%" width="500%" height="500%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<clipPath id="hwin"><rect width="1200" height="640" rx="18"/></clipPath>
+<style>
     .sans{font-family:Roboto,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
-    @media (prefers-reduced-motion: reduce){ animate, animateMotion{display:none} }
+    text{white-space:pre}
+    @media (prefers-reduced-motion: reduce){ animate, animateMotion, animateTransform{display:none} }
   </style>
 </defs>
-<g clip-path="url(#win)">
-  <rect width="1200" height="640" fill="#170A05"/>
-  <rect width="1200" height="640" fill="url(#grid)"/>
-  <ellipse cx="180" cy="40" rx="420" ry="300" fill="url(#g1)"/>
-  <ellipse cx="1040" cy="560" rx="360" ry="260" fill="url(#g2)"/>
-  <rect width="1200" height="44" fill="#22100A"/>
-  <line x1="0" y1="44" x2="1200" y2="44" stroke="#F8EDE5" stroke-opacity=".1"/>
-  <circle cx="28" cy="22" r="6" fill="#E14817"/><circle cx="50" cy="22" r="6" fill="#F2951C"/><circle cx="72" cy="22" r="6" fill="#87888A"/>
-  <text x="600" y="27" text-anchor="middle" class="mono" font-size="13" fill="#87888A" letter-spacing=".5">labs64.io-commons · labs64io-parent</text>
-  <text x="64" y="100" class="sans" font-size="13" font-weight="500" letter-spacing="3.6" fill="#F08B53">LABS64.IO  ·  COMMONS</text>
-  <text x="64" y="156" class="sans" font-size="48" font-weight="700" letter-spacing="-1.4" fill="#F8EDE5">Write the plumbing once.</text>
-  <text x="64" y="212" class="sans" font-size="48" font-weight="700" letter-spacing="-1.4" fill="#E14817">Every service behaves the same.</text>
-  <text x="1136" y="212" text-anchor="end" class="mono" font-size="14" fill="#F8EDE5" fill-opacity=".6">Java 17+  ·  Python 3.13  ·  Maven Central</text>
-<use href="#pi0" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po0" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#pi1" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po1" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#pi2" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po2" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#pi3" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<use href="#po3" fill="none" stroke="#F8EDE5" stroke-opacity=".22" stroke-width="1.5"/>
-<text x="64" y="262" class="mono" font-size="12" letter-spacing="2.4" fill="#87888A">WHO USES IT</text>
-<rect x="64" y="274" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="300" r="4" fill="#E14817"/>
-<text x="102" y="297" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Java service</text>
-<text x="102" y="315" class="mono" font-size="11.5" fill="#F08B53">Spring Boot 4</text>
-<rect x="64" y="274" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.0s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="64" y="344" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="370" r="4" fill="#E14817"/>
-<text x="102" y="367" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Python service</text>
-<text x="102" y="385" class="mono" font-size="11.5" fill="#F08B53">FastAPI</text>
-<rect x="64" y="344" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.25s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="64" y="414" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="440" r="4" fill="#E14817"/>
-<text x="102" y="437" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">API gateway</text>
-<text x="102" y="455" class="mono" font-size="11.5" fill="#F08B53">trusted headers</text>
-<rect x="64" y="414" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.5s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="64" y="484" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<circle cx="86" cy="510" r="4" fill="#E14817"/>
-<text x="102" y="507" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Build pipeline</text>
-<text x="102" y="525" class="mono" font-size="11.5" fill="#F08B53">policy generation</text>
-<rect x="64" y="484" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="0.75s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="430" y="262" width="340" height="286" rx="14" fill="#F8EDE5" fill-opacity=".05" stroke="#F08B53" stroke-opacity=".55"/>
-<text x="454" y="293" class="mono" font-size="12" letter-spacing="2.4" fill="#F08B53">COMMONS</text>
-<rect x="454" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="454" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.1917;0.2167;0.3167;0.3417;1.0000"/></rect>
-<text x="486" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Parse</text>
-<rect x="530" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="530" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3083;0.3333;0.4333;0.4583;1.0000"/></rect>
-<text x="562" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Enforce</text>
-<rect x="606" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="606" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.4250;0.4500;0.5500;0.5750;1.0000"/></rect>
-<text x="638" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Relay</text>
-<rect x="682" y="308" width="64" height="34" rx="8" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<rect x="682" y="308" width="64" height="34" rx="8" fill="#E14817" opacity="0">
-  <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.5417;0.5667;0.6667;0.6917;1.0000"/></rect>
-<text x="714" y="330" text-anchor="middle" class="mono" font-size="12" font-weight="500" fill="#F8EDE5">Generate</text>
-<rect x="454" y="360" width="292" height="34" rx="8" fill="none" stroke="#F8EDE5" stroke-opacity=".2" stroke-dasharray="4 4"/>
-<text x="600" y="382" text-anchor="middle" class="mono" font-size="11.5" fill="#F8EDE5" fill-opacity=".7">shared test vectors · Java = Python</text>
-<rect x="454" y="410" width="292" height="122" rx="10" fill="#0A0402" fill-opacity=".6" stroke="#F8EDE5" stroke-opacity=".15"/>
-<g class="mono" font-size="12.5" fill="#F8EDE5">
-  <text x="470" y="436" fill-opacity=".5">{</text>
-  <text x="486" y="458"><tspan fill="#F08B53">"X-Auth-User"</tspan>: "svc:billing",</text>
-  <text x="486" y="480"><tspan fill="#F08B53">"X-Auth-Tenant"</tspan>: "acme",</text>
-  <g><text x="486" y="502"><tspan fill="#F08B53">"scopes"</tspan>: "parsing"</text>
-    <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="1;1;0;0;1;1" keyTimes="0.0000;0.3083;0.3333;0.9333;0.9833;1.0000"/></g>
-  <g opacity="0"><text x="486" y="502"><tspan fill="#F08B53">"scopes"</tspan>: <tspan fill="#E14817" font-weight="700">"payment:pay"</tspan></text>
-    <animate attributeName="opacity" dur="6.0s" repeatCount="indefinite" values="0;0;1;1;0;0" keyTimes="0.0000;0.3083;0.3333;0.9333;0.9833;1.0000"/></g>
-  <text x="470" y="524" fill-opacity=".5">}</text>
-</g>
-<text x="920" y="262" class="mono" font-size="12" letter-spacing="2.4" fill="#87888A">WHAT YOU GET</text>
-<rect x="920" y="274" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="297" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Auth context</text>
-<text x="942" y="315" class="mono" font-size="11.5" fill="#F08B53">fail-closed starter</text>
-<path d="M1112,295 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="274" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="4.4s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="920" y="344" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="367" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">OpenAPI starter</text>
-<text x="942" y="385" class="mono" font-size="11.5" fill="#F08B53">one metadata model</text>
-<path d="M1112,365 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="344" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="4.6000000000000005s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="920" y="414" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="437" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Query plan to JPA</text>
-<text x="942" y="455" class="mono" font-size="11.5" fill="#F08B53">Data PEP</text>
-<path d="M1112,435 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="414" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="4.800000000000001s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<rect x="920" y="484" width="216" height="52" rx="10" fill="#F8EDE5" fill-opacity=".05" stroke="#F8EDE5" stroke-opacity=".2"/>
-<text x="942" y="507" class="sans" font-size="15" font-weight="700" fill="#F8EDE5">Policy toolkit</text>
-<text x="942" y="525" class="mono" font-size="11.5" fill="#F08B53">OpenAPI to Cerbos</text>
-<path d="M1112,505 l5,5 l-5,5" fill="none" stroke="#E14817" stroke-width="2" stroke-linecap="round"/>
-<rect x="920" y="484" width="216" height="52" rx="10" fill="none" stroke="#E14817" stroke-width="2" opacity="0">
-      <animate attributeName="opacity" dur="6.0s" begin="5.0s" repeatCount="indefinite" values="0;1;0;0" keyTimes="0;0.05;0.1500;1"/></rect>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.0s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi0"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.0s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.25s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi1"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.25s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.5s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi2"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.5s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#F8EDE5" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="0.75s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#pi3"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="0.75s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.2s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po0"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.2s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.4000000000000004s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po1"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.4000000000000004s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po2"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.6s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
-<circle r="5" fill="#E14817" opacity="0" filter="url(#glow)">
-      <animateMotion dur="6.0s" begin="3.8000000000000003s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;0.2000;1" calcMode="linear"><mpath href="#po3"/></animateMotion>
-      <animate attributeName="opacity" dur="6.0s" begin="3.8000000000000003s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;0.02;0.1800;0.2000;1"/>
-    </circle>
+<g clip-path="url(#hwin)">
+<rect width="1200" height="640" fill="#170A05"/><rect width="1200" height="640" fill="url(#hgrid)"/>
+<ellipse cx="180" cy="40" rx="420" ry="300" fill="url(#hg1)"/><ellipse cx="1040" cy="560" rx="360" ry="260" fill="url(#hg2)"/>
+<rect width="1200" height="44" fill="#22100A"/><line x1="0" y1="44" x2="1200" y2="44" stroke="#F8EDE5" stroke-opacity=".1"/>
+<circle cx="28" cy="22" r="6" fill="#E14817"/><circle cx="50" cy="22" r="6" fill="#F2951C"/><circle cx="72" cy="22" r="6" fill="#87888A"/>
+<text x="600" y="27" class="mono" font-size="13" fill="#87888A" text-anchor="middle" letter-spacing="0.5">labs64.io-commons · labs64io-parent</text>
+<text x="64" y="100" class="sans" font-size="13" font-weight="500" fill="#F08B53" letter-spacing="3.6">LABS64.IO  ·  COMMONS</text>
+<text x="64" y="156" class="sans" font-size="48" font-weight="700" fill="#F8EDE5" letter-spacing="-1.4">Write the plumbing once.</text>
+<text x="64" y="212" class="sans" font-size="48" font-weight="700" fill="#E14817" letter-spacing="-1.4">Every service behaves the same.</text>
+<text x="1136" y="212" class="mono" font-size="14" fill="#F8EDE5" fill-opacity="0.6" text-anchor="end">Java 17+  ·  Python 3.13  ·  Maven Central</text>
+<rect x="64" y="252" width="1072" height="304" rx="16" fill="#F8EDE5" fill-opacity=".035" stroke="#F8EDE5" stroke-opacity=".22"/><rect x="74" y="262" width="1052" height="284" rx="10" fill="none" stroke="#F8EDE5" stroke-opacity=".08"/><rect x="492.15" y="284" width="170.75" height="30" rx="5" fill="#E14817" opacity=".12"><animate attributeName="opacity" values=".12;.12;.85;.85;.4;.4;.85;.12" keyTimes="0;0.000;0.025;0.233;0.267;.8;.84;1" dur="6s" begin="0s" repeatCount="indefinite"/></rect><text x="100" y="304" class="mono" font-size="14" font-weight="500" fill="#F8EDE5" letter-spacing="3">JAVA</text><text x="100" y="324" class="mono" font-size="11.5" fill="#F08B53">Spring Boot 4</text><text x="290" y="305" class="mono" font-size="18" fill="#F8EDE5">@Authorize(scope = "payments:read")</text><text x="290" y="332" class="mono" font-size="13" fill="#87888A">ResponseEntity&lt;Payment&gt; get(@PathVariable String id)</text><g opacity=".25"><animate attributeName="opacity" values=".25;.25;1;1;.25" keyTimes="0;0.033;0.050;.97;1" dur="6s" begin="0s" repeatCount="indefinite"/><rect x="1010" y="286" width="96" height="28" rx="6" fill="none" stroke="#E14817" stroke-width="2"/><text x="1058" y="305" class="mono" font-size="13" font-weight="500" fill="#E14817" text-anchor="middle" letter-spacing="2">ALLOW</text></g><path d="M96,358 H1104" stroke="#F8EDE5" stroke-opacity=".12" stroke-dasharray="2 6"/><rect x="470.45" y="380" width="170.75" height="30" rx="5" fill="#E14817" opacity=".12"><animate attributeName="opacity" values=".12;.12;.85;.85;.4;.4;.85;.12" keyTimes="0;0.267;0.292;0.500;0.533;.8;.84;1" dur="6s" begin="0s" repeatCount="indefinite"/></rect><text x="100" y="400" class="mono" font-size="14" font-weight="500" fill="#F8EDE5" letter-spacing="3">PYTHON</text><text x="100" y="420" class="mono" font-size="11.5" fill="#F08B53">FastAPI</text><text x="290" y="401" class="mono" font-size="18" fill="#F8EDE5">@authorize(scope="payments:read")</text><text x="290" y="428" class="mono" font-size="13" fill="#87888A">async def get_payment(id: str) -&gt; Payment:</text><g opacity=".25"><animate attributeName="opacity" values=".25;.25;1;1;.25" keyTimes="0;0.300;0.317;.97;1" dur="6s" begin="0s" repeatCount="indefinite"/><rect x="1010" y="382" width="96" height="28" rx="6" fill="none" stroke="#E14817" stroke-width="2"/><text x="1058" y="401" class="mono" font-size="13" font-weight="500" fill="#E14817" text-anchor="middle" letter-spacing="2">ALLOW</text></g><path d="M96,454 H1104" stroke="#F8EDE5" stroke-opacity=".12" stroke-dasharray="2 6"/><rect x="600.65" y="476" width="170.75" height="30" rx="5" fill="#E14817" opacity=".12"><animate attributeName="opacity" values=".12;.12;.85;.85;.4;.4;.85;.12" keyTimes="0;0.533;0.558;0.767;0.800;.8;.84;1" dur="6s" begin="0s" repeatCount="indefinite"/></rect><text x="100" y="496" class="mono" font-size="14" font-weight="500" fill="#F8EDE5" letter-spacing="3">POLICY</text><text x="100" y="516" class="mono" font-size="11.5" fill="#F08B53">Cerbos, generated</text><text x="290" y="497" class="mono" font-size="18" fill="#F8EDE5">- actions: ["get"]   roles: ["payments:read"]</text><text x="290" y="524" class="mono" font-size="13" fill="#87888A">  effect: EFFECT_ALLOW   # from openapi.yaml</text><g opacity=".25"><animate attributeName="opacity" values=".25;.25;1;1;.25" keyTimes="0;0.567;0.583;.97;1" dur="6s" begin="0s" repeatCount="indefinite"/><rect x="1010" y="478" width="96" height="28" rx="6" fill="none" stroke="#E14817" stroke-width="2"/><text x="1058" y="497" class="mono" font-size="13" font-weight="500" fill="#E14817" text-anchor="middle" letter-spacing="2">ALLOW</text></g><text x="600" y="546" class="mono" font-size="12" fill="#87888A" text-anchor="middle">one rule · three dialects · one set of test vectors</text>
 <text x="64" y="598" class="mono" font-size="13" fill="#87888A">Apache-2.0 · io.labs64 on Maven Central</text>
-<text x="1136" y="598" text-anchor="end" class="mono" font-size="13" fill="#F08B53">labs64.io/docs</text>
-<rect x="0" y="636" width="1200" height="4" fill="#E14817" opacity=".9">
-  <animate attributeName="width" dur="6.0s" repeatCount="indefinite" values="0;1200" calcMode="linear"/></rect>
-</g>
-<rect x=".5" y=".5" width="1199" height="639" rx="18" fill="none" stroke="#F8EDE5" stroke-opacity=".12"/>
-</svg>
+<text x="1136" y="598" class="mono" font-size="13" fill="#F08B53" text-anchor="end">labs64.io/docs</text>
+<rect x="0" y="636" width="1200" height="4" fill="#E14817" opacity=".9"><animate attributeName="width" dur="6s" repeatCount="indefinite" values="0;1200"/></rect>
+</g><rect x=".5" y=".5" width="1199" height="639" rx="18" fill="none" stroke="#F8EDE5" stroke-opacity=".12"/></svg>
