@@ -10,8 +10,10 @@ import io.opentelemetry.api.trace.Span;
  *
  * <ul>
  *   <li>a non-sensitive <b>summary</b> on this class's logger — INFO for a clean
- *       allow, WARN for any deny/error/mismatch so it is grep-able before
- *       flipping ENFORCE; and</li>
+ *       allow in SHADOW mode, WARN for any deny/error/mismatch so it is grep-able
+ *       before flipping ENFORCE. Once enforced, an allow is routine (one per
+ *       request, which the gateway and the module log already) and goes to DEBUG;
+ *       and</li>
  *   <li>a <b>detail</b> line on the dedicated {@code io.labs64.authcontext.authorization.detail}
  *       logger at DEBUG carrying the sensitive fields (user, tenant, resolved
  *       resource id, raw error). It is off unless that logger is raised to DEBUG,
@@ -33,7 +35,11 @@ public class LoggingDecisionListener implements AuthorizationDecisionListener {
                 d.action(), d.resourceType(),
                 d.reasons().isEmpty() ? "-" : String.join(",", d.reasons()), d.requestId());
         if ("allow".equals(d.decision())) {
-            logger.info(summary);
+            if (d.enforced()) {
+                logger.debug(summary);
+            } else {
+                logger.info(summary);
+            }
         } else {
             logger.warn(summary);
         }

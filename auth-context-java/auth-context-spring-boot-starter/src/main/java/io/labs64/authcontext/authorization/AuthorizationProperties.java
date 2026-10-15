@@ -39,6 +39,16 @@ public class AuthorizationProperties {
      */
     private boolean warmUp = true;
 
+    /**
+     * How long an allow/deny from the PDP is reused for the same principal (user, tenant, scopes),
+     * action and resource (type, id, attributes). Zero (the default) asks the PDP every time. A
+     * policy change then takes effect within this time. PDP errors are never cached.
+     */
+    private Duration decisionCacheTtl = Duration.ZERO;
+
+    /** Upper bound of cached decisions; a full cache drops its expired entries, then all of them. */
+    private int decisionCacheMaxEntries = 2048;
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -77,5 +87,21 @@ public class AuthorizationProperties {
 
     public void setWarmUp(final boolean warmUp) {
         this.warmUp = warmUp;
+    }
+
+    public Duration getDecisionCacheTtl() {
+        return decisionCacheTtl;
+    }
+
+    public void setDecisionCacheTtl(final Duration decisionCacheTtl) {
+        this.decisionCacheTtl = decisionCacheTtl == null ? Duration.ZERO : decisionCacheTtl;
+    }
+
+    public int getDecisionCacheMaxEntries() {
+        return decisionCacheMaxEntries;
+    }
+
+    public void setDecisionCacheMaxEntries(final int decisionCacheMaxEntries) {
+        this.decisionCacheMaxEntries = decisionCacheMaxEntries;
     }
 }

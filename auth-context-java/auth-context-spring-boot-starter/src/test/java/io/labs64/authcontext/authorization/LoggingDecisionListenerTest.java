@@ -47,13 +47,31 @@ class LoggingDecisionListenerTest {
     }
 
     @Test
-    void summaryOmitsSensitiveFieldsAndCarriesOutcome() {
+    void enforcedAllowIsDebug() {
+        summaryLogger.setLevel(Level.DEBUG);
+        try {
+            listener.onDecision(decision(true, true, null));
+        } finally {
+            summaryLogger.setLevel(null);
+        }
+        assertThat(summaryAppender.list).hasSize(1);
+        assertThat(summaryAppender.list.get(0).getLevel()).isEqualTo(Level.DEBUG);
+    }
+
+    @Test
+    void enforcedAllowIsNotLoggedAtTheDefaultLevel() {
         listener.onDecision(decision(true, true, null));
+        assertThat(summaryAppender.list).isEmpty();
+    }
+
+    @Test
+    void summaryOmitsSensitiveFieldsAndCarriesOutcome() {
+        listener.onDecision(decision(true, false, null));
         assertThat(summaryAppender.list).hasSize(1);
         ILoggingEvent e = summaryAppender.list.get(0);
         String msg = e.getFormattedMessage();
         assertThat(e.getLevel()).isEqualTo(Level.INFO);
-        assertThat(msg).contains("outcome=enforced-allow", "decision=allow",
+        assertThat(msg).contains("outcome=shadow-allow", "decision=allow",
                 "action=payPayment", "resourceType=Payment", "reasons=policy0", "requestId=r-1");
         // sensitive fields MUST NOT be in the summary
         assertThat(msg).doesNotContain("alice", "t_100", "pay_1");
@@ -89,7 +107,7 @@ class LoggingDecisionListenerTest {
     @Test
     void detailSuppressedWhenLoggerNotAtDebug() {
         detailLogger.setLevel(Level.INFO); // detail off (default posture)
-        listener.onDecision(decision(true, true, null));
+        listener.onDecision(decision(true, false, null));
         assertThat(detailAppender.list).isEmpty();
         assertThat(summaryAppender.list).hasSize(1);
     }

@@ -2,6 +2,10 @@ package io.labs64.authcontext.cerbos;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongSupplier;
 
 import dev.cerbos.sdk.CerbosBlockingClient;
 import dev.cerbos.sdk.CerbosException;
@@ -23,8 +27,9 @@ import io.labs64.authcontext.core.AuthHeaders;
 
 /**
  * Cerbos PDP client — the {@link AuthorizationService} implementation.
- * One {@code CheckResources} gRPC call per {@code @Authorize} decision; fail
- * closed on any client or transport error. Roles: {@code "service"} for
+ * One {@code CheckResources} gRPC call per {@code @Authorize} decision, or, with
+ * {@code decision-cache-ttl}, per principal, action and resource within that
+ * time; fail closed on any client or transport error. Roles: {@code "service"} for
  * {@code svc:}-prefixed principals, else {@code "user"} (rules match
  * {@code roles: ["*"]}; the role only feeds the tenant-condition's service
  * exemption).
@@ -39,12 +44,32 @@ public class CerbosAuthorizationService implements AuthorizationService, QueryPl
     private static final int GRPC_DEADLINE_EXCEEDED = 4;
     private static final int GRPC_UNAVAILABLE = 14;
 
+    /** Everything the PDP sees for a check: the principal, the action and the resource with its attributes. */
+    private record DecisionKey(String userId, String tenantId, Set<String> scopes, String action,
+            ResourceEntity resource) {
+    }
+
+    private record CachedDecision(boolean allowed, long expiresAtNanos) {
+    }
+
     private final AuthorizationProperties properties;
     private final CerbosBlockingClient client;
+    private final LongSupplier nanoClock;
+    private final long cacheTtlNanos;
+    private final int cacheMaxEntries;
+    private final Map<DecisionKey, CachedDecision> decisions = new ConcurrentHashMap<>();
 
     public CerbosAuthorizationService(final AuthorizationProperties properties, final CerbosBlockingClient client) {
+        this(properties, client, System::nanoTime);
+    }
+
+    CerbosAuthorizationService(final AuthorizationProperties properties, final CerbosBlockingClient client,
+            final LongSupplier nanoClock) {
         this.properties = properties;
         this.client = client;
+        this.nanoClock = nanoClock;
+        this.cacheTtlNanos = Math.max(0, properties.getDecisionCacheTtl().toNanos());
+        this.cacheMaxEntries = Math.max(1, properties.getDecisionCacheMaxEntries());
     }
 
     @Override
@@ -57,8 +82,7 @@ public class CerbosAuthorizationService implements AuthorizationService, QueryPl
             final ResourceEntity resource) {
         boolean enforced = isEnforcing();
         try {
-            CheckResult result = check(principal(context), toCerbosResource(resource), action);
-            boolean allowed = result.isAllowed(action);
+            boolean allowed = allowed(context, action, resource);
             // Cerbos surfaces matched-policy detail in its response meta / audit
             // log; reasons stay best-effort empty here — the summary log still
             // carries the action/resource/decision triple, joinable to PDP logs
@@ -71,6 +95,31 @@ public class CerbosAuthorizationService implements AuthorizationService, QueryPl
                     resource == null ? "-" : resource.id(), false, enforced, List.of(), e.toString(),
                     context.userId(), context.tenantId(), context.requestId());
         }
+    }
+
+    /**
+     * The PDP's answer, from the decision cache while it is fresh (decision-cache-ttl). Only answers
+     * are cached: a failed check throws and is asked again next time.
+     */
+    private boolean allowed(final AuthContext context, final String action, final ResourceEntity resource) {
+        if (cacheTtlNanos == 0) {
+            return check(principal(context), toCerbosResource(resource), action).isAllowed(action);
+        }
+        DecisionKey key = new DecisionKey(context.userId(), context.tenantId(), context.scopes(), action, resource);
+        long now = nanoClock.getAsLong();
+        CachedDecision cached = decisions.get(key);
+        if (cached != null && now - cached.expiresAtNanos() < 0) {
+            return cached.allowed();
+        }
+        boolean allowed = check(principal(context), toCerbosResource(resource), action).isAllowed(action);
+        if (decisions.size() >= cacheMaxEntries) {
+            decisions.values().removeIf(d -> now - d.expiresAtNanos() >= 0);
+            if (decisions.size() >= cacheMaxEntries) {
+                decisions.clear();
+            }
+        }
+        decisions.put(key, new CachedDecision(allowed, now + cacheTtlNanos));
+        return allowed;
     }
 
     /**

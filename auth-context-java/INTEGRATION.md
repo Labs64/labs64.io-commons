@@ -103,6 +103,12 @@ PDP client settings (`labs64.auth.authz.*`):
 | `pdp-address` | `localhost:3593` | Cerbos gRPC address, e.g. `labs64io-authz-pdp.<ns>.svc.cluster.local:3593` |
 | `timeout` | `2s` | Deadline of one PDP call. The Cerbos SDK default is 500 ms, which the first call on a cold JVM exceeds because it also opens the channel |
 | `warm-up` | `true` | One PDP call at startup, before the application reports ready, so the first real request finds an open channel. A failure is logged and does not stop startup |
+| `decision-cache-ttl` | `0` (off) | Reuse an allow/deny for the same principal (user, tenant, scopes), action and resource (type, id, attributes) for this long instead of a PDP call per request. A policy change takes effect within it; PDP errors are never cached. Env: `LABS64_AUTH_AUTHZ_DECISIONCACHETTL=5s` |
+| `decision-cache-max-entries` | `2048` | Bound of that cache; when full, expired entries go first, then all of them |
+
+Every decision is still published to the decision listeners (one per request, with its own
+`requestId`), cached or not. The default listener logs a clean allow at INFO in `SHADOW` mode and at
+DEBUG once enforced; a deny or an error is WARN in both.
 
 A transient transport failure (deadline exceeded or unavailable, e.g. a PDP pod restarting) is retried once;
 a check is read-only. A second failure, or any other error, is a deny.
