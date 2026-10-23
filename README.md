@@ -82,7 +82,7 @@ Every service in that stack inherits `labs64io-parent` and parses the trusted he
 
 ### 2. Maven and pip: use it in your service
 
-Libraries are published to Maven Central under `io.labs64`; no repository configuration is needed. A service inherits `labs64io-parent`; that one version pins the Spring Boot line, the shared third-party versions **and** every commons library:
+Stable releases are published to Maven Central under `io.labs64` (pick the version shown by the badge above); no repository configuration is needed. A service inherits `labs64io-parent`; that one version pins the Spring Boot line, the shared third-party versions **and** every commons library:
 
 ```xml
 <parent>

@@ -270,6 +270,11 @@
                 </plugins>
             </build>
         </profile>
+        <!-- Maven Central staging, used only by the manual promotion workflow
+             (maven-promote-central.yml, -P release,central) for a release already on Labs64 Nexus.
+             The plugin takes over the deploy phase, so Nexus is not pushed to. The bundle is
+             uploaded and validated but NOT published: a person presses Publish in the Central
+             Portal. Never set autoPublish to true; the promotion workflow refuses such a tag. -->
         <profile>
             <id>central</id>
             <build>
@@ -281,8 +286,8 @@
                         <extensions>true</extensions>
                         <configuration>
                             <publishingServerId>ossrh</publishingServerId>
-                            <autoPublish>true</autoPublish>
-                            <waitUntil>published</waitUntil>
+                            <autoPublish>false</autoPublish>
+                            <waitUntil>validated</waitUntil>
                         </configuration>
                     </plugin>
                 </plugins>

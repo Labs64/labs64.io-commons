@@ -23,7 +23,7 @@ Both implementations obey the trusted header contract (`X-Auth-User`, `X-Auth-Sc
 
 **Java:**
 
-Published to Maven Central under `io.labs64`; no repository configuration is needed. A service inherits `labs64io-parent`; that one version pins the Spring
+Stable releases are on Maven Central under `io.labs64` and need no repository configuration; pick the version shown by the Maven Central badge (the newest release may not be promoted yet). A service inherits `labs64io-parent`; that one version pins the Spring
 Boot line, the shared third-party versions **and** every commons library, so the libraries
 themselves are declared without a version:
 
@@ -80,8 +80,13 @@ to `0.0.0-SNAPSHOT` ("built from source, unreleased"). The release version is th
   GPG-signed, to the Nexus release repository through the shared `maven-publish.yml` reusable
   workflow (`labs64.io-workspace`). Nothing is committed back and no pom is edited.
   To replay a release, run the workflow manually **from the tag**.
-- **Maven Central** is opt-in: set the repository variable `PUBLISH_MAVEN_CENTRAL=true`
-  (needs `OSS_USER` / `OSS_PASS`).
+- **Maven Central — promoted by hand, never by a release.** Every release goes to Nexus only; Central
+  has a deployment quota, so a release is published there only when someone decides it should be.
+  Run *Commons - Promote to Maven Central* (`labs64io-promote-central.yml`) on `master` with the
+  version `X.Y.Z`. It rebuilds that tag, uploads the signed bundle to the Central Portal and stops: the
+  deployment waits as *validated* until you press *Publish* (or *Drop*) at
+  <https://central.sonatype.com/publishing/deployments>. Only a version that is tagged and already on
+  Nexus can be promoted (needs `OSS_USER` / `OSS_PASS`, a Portal user token).
 
 After a release, each consumer moves its `labs64io-parent` version to it (Renovate opens that PR;
 `payment-gateway-api` additionally carries `openapi-schema-generator.version`).

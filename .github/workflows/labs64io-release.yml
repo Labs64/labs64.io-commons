@@ -8,8 +8,8 @@ name: Labs64.IO - Commons - Release
 #
 # workflow_dispatch replays a release: run it FROM THE TAG (not from a branch).
 #
-# Maven Central publishing is opt-in via the repository variable
-# PUBLISH_MAVEN_CENTRAL=true (needs OSS_USER / OSS_PASS).
+# This workflow never touches Maven Central (its deployment quota is for deliberately
+# promoted releases only): see labs64io-promote-central.yml.
 
 on:
   release:
@@ -53,5 +53,4 @@ jobs:
       working-directory: .
       mode: release
       version: ${{ needs.version.outputs.version }}
-      publish-central: ${{ vars.PUBLISH_MAVEN_CENTRAL == 'true' }}
     secrets: inherit
