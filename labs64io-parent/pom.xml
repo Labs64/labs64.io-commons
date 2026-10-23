@@ -63,7 +63,7 @@
         <!-- renovate: datasource=maven depName=org.apache.commons:commons-lang3 -->
         <commons-lang3.version>3.21.0</commons-lang3.version>
         <!-- renovate: datasource=maven depName=com.fasterxml.jackson.datatype:jackson-datatype-jsr310 -->
-        <jackson-datatype.version>2.22.3</jackson-datatype.version>
+        <jackson-datatype.version>2.22.4</jackson-datatype.version>
         <!-- renovate: datasource=maven depName=net.logstash.logback:logstash-logback-encoder -->
         <logstash.version>9.0</logstash.version>
         <!-- renovate: datasource=maven depName=org.projectlombok:lombok -->
