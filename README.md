@@ -10,7 +10,7 @@
 
 <p align="center"><img src="docs/assets/commons-hero.svg" alt="Commons: The same payments:read rule written three ways, as a Java annotation, a Python decorator and a generated Cerbos policy, each returning the same ALLOW from one set of shared test vectors." width="880"></p>
 
-[**Get started**](https://labs64.io/docs/development/shared-libraries.html) · [Features](#features) · [AI agents](#using-commons-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/development/contributing.html) · [labs64.io](https://labs64.io)
+[**Get started**](https://labs64.io/docs/development/shared-libraries.html) · [Features](#features) · [AI agents](#using-it-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/development/contributing.html) · [labs64.io](https://labs64.io)
 
 > [!NOTE]
 > Consume Commons through the `labs64io-parent` POM: one version pins the Spring Boot line, the shared dependency versions **and** every library, so libraries are declared without a version.
@@ -59,14 +59,9 @@ Services that each re-implement tenant headers, OpenAPI metadata and authorizati
 
 The Java and Python implementations are pinned to identical behaviour by the shared vectors in [`test-vectors/`](test-vectors/).
 
-## Using Commons with AI agents
+## Using it with AI agents
 
-Commons is what makes every Labs64.IO service behave the same, which is what lets an agent trust one mental model across the platform.
-
-- **The contract is explicit.** The trusted headers are `X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant` and `X-Request-ID`; values are validated against `^[a-zA-Z0-9_.:-]+$` and scopes are comma-separated.
-- **Test vectors are the spec.** [`test-vectors/`](test-vectors/) define expected behaviour for both languages; an agent changing a parser must keep them green.
-- **Never re-pin versions in a service.** Change `labs64io-parent` once; every service inherits it.
-- **Working on the code with an agent?** [`AGENTS.md`](AGENTS.md) describes the layout, release rules and test commands.
+The trusted-header contract and test vectors are explicit, so an agent can rely on one mental model across services. The [guide for AI agents](https://labs64.io/docs/introduction/ai-agents.html) covers authentication, retries and errors across all modules. Working on this repository with an agent? [`AGENTS.md`](AGENTS.md) describes the layout, release rules and test commands.
 
 ## The Labs64.IO Ecosystem
 
