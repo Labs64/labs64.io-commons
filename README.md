@@ -6,11 +6,11 @@
 [![CI](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml/badge.svg)](https://github.com/Labs64/labs64.io-commons/actions/workflows/labs64io-ci.yml)
 [![Maven Central (auth-context)](https://img.shields.io/maven-central/v/io.labs64/auth-context-spring-boot-starter?label=Maven%20Central)](https://central.sonatype.com/artifact/io.labs64/auth-context-spring-boot-starter)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/development/shared-libraries.html)
+[![📖 Documentation](https://img.shields.io/badge/📖-Documentation-AB6543.svg)](https://labs64.io/docs/development/contributing.html)
 
 <p align="center"><img src="docs/assets/commons-hero.svg" alt="Commons: The same payments:read rule written three ways, as a Java annotation, a Python decorator and a generated Cerbos policy, each returning the same ALLOW from one set of shared test vectors." width="880"></p>
 
-[Why Commons?](#why-commons) · [Documentation](https://labs64.io/docs/development/shared-libraries.html) · [Build and test](#build-and-test) · [Ecosystem](#the-labs64io-ecosystem) · [labs64.io](https://labs64.io)
+[**Get started**](https://labs64.io/docs/development/shared-libraries.html) · [Features](#features) · [AI agents](#using-commons-with-ai-agents) · [Ecosystem](#the-labs64io-ecosystem) · [Documentation](https://labs64.io/docs/development/contributing.html) · [labs64.io](https://labs64.io)
 
 > [!NOTE]
 > Consume Commons through the `labs64io-parent` POM: one version pins the Spring Boot line, the shared dependency versions **and** every library, so libraries are declared without a version.
@@ -34,46 +34,66 @@ Services that each re-implement tenant headers, OpenAPI metadata and authorizati
 - Your services are not behind the Labs64.IO gateway: the auth-context libraries assume its header contract.
 - You need a general-purpose utility library: these are purpose-built platform libraries.
 
-## Documentation
+## Features
 
-Install, configure and operate Commons in the **[Commons documentation](https://labs64.io/docs/development/shared-libraries.html)**.
+- **`labs64io-parent`**: the build parent of every Java library and service; Spring Boot line, BOM security overrides, shared versions and release rules.
+- **`auth-context-*`**: dependency-free model and parser, a Spring Boot starter (fail-closed enforcement, `@RequireScopes`, outbound propagation, test support) and a Python mirror (ASGI middleware, FastAPI dependencies, httpx hook).
+- **`openapi-spring-boot-starter`**: shared springdoc runtime servers, bearer security and canonical OpenAPI metadata.
+- **`openapi-schema-generator`**: versioned JSON Schema documents from OpenAPI 3.1 `$schema` fields.
+- **`authz-queryplan-jpa`**: translates a Cerbos `PlanResources` query plan into a Spring Data JPA `Specification` (Data PEP).
+- **`auth-policy-cerbos`**: the policy-generation toolkit that derives the central PDP's policies from OpenAPI.
+- **Shared test vectors**: Java and Python implementations are pinned to identical behaviour.
 
-[What is in the box](https://labs64.io/docs/development/shared-libraries.html#what-is-in-the-box) · [The trusted header contract](https://labs64.io/docs/development/shared-libraries.html#the-trusted-header-contract) · [Use the libraries in a Java service](https://labs64.io/docs/development/shared-libraries.html#use-the-libraries-in-a-java-service)
+## What is in the box
 
-New to Labs64.IO? The [Quickstart](https://labs64.io/docs/getting-started/quickstart.html) puts the platform on any Kubernetes cluster in about five minutes.
+| Library | Language | What it gives you |
+|---|---|---|
+| [`labs64io-parent`](labs64io-parent/) | Maven POM | The build parent: Spring Boot line, security overrides, shared versions and release rules in one version |
+| [`auth-context-core`](auth-context-java/auth-context-core/) | Java 17+ | The identity model, holder and trusted-header parser, with no dependencies |
+| [`auth-context-spring-boot-starter`](auth-context-java/auth-context-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Fail-closed header enforcement, `@RequireScopes`, outbound propagation and test support |
+| [`auth-context-python`](auth-context-python/) | Python 3.13+ | The same contract for ASGI and FastAPI services, with an httpx hook and pytest fixture |
+| [`openapi-spring-boot-starter`](openapi-spring-boot-starter/) | Java 17+ / Spring Boot 4 | Shared springdoc servers, bearer security and canonical OpenAPI metadata |
+| [`openapi-schema-generator`](openapi-schema-generator/) | Java 17+ | Versioned JSON Schema documents from OpenAPI 3.1 |
+| [`authz-queryplan-jpa`](authz-queryplan-jpa/) | Java 17+ / Spring Boot 4 | Turns a Cerbos query plan into a JPA `Specification` (Data PEP) |
+| [`auth-policy-cerbos`](auth-policy-cerbos/) | Shell + OpenAPI | The toolkit that derives the central policy engine's policies from your contract |
 
-## Build and test
+The Java and Python implementations are pinned to identical behaviour by the shared vectors in [`test-vectors/`](test-vectors/).
 
-```bash
-just build                                        # build and test everything
-just java                                         # Java tests (mvn verify)
-just python-venv && cd auth-context-python && .venv/bin/pytest   # the Python library
-just cerbos                                       # policy and equivalence gate (via Docker)
-```
+## Using Commons with AI agents
 
-Needs JDK 25, Maven 3.6.3+ and Python 3.13. [`docs/reference.md`](docs/reference.md) covers the release process. Working on the code with an AI agent? [`AGENTS.md`](AGENTS.md) describes the layout, release rules and checks.
+Commons is what makes every Labs64.IO service behave the same, which is what lets an agent trust one mental model across the platform.
+
+- **The contract is explicit.** The trusted headers are `X-Auth-User`, `X-Auth-Scopes`, `X-Auth-Tenant` and `X-Request-ID`; values are validated against `^[a-zA-Z0-9_.:-]+$` and scopes are comma-separated.
+- **Test vectors are the spec.** [`test-vectors/`](test-vectors/) define expected behaviour for both languages; an agent changing a parser must keep them green.
+- **Never re-pin versions in a service.** Change `labs64io-parent` once; every service inherits it.
+- **Working on the code with an agent?** [`AGENTS.md`](AGENTS.md) describes the layout, release rules and test commands.
 
 ## The Labs64.IO Ecosystem
 
-This repository is part of the [Labs64.IO Ecosystem](https://labs64.io): open-source building blocks for secure commerce platforms. Every module is documented at [labs64.io/docs](https://labs64.io/docs/).
+Commons is one module of the [Labs64.IO Ecosystem](https://labs64.io); [every module is documented here](https://labs64.io/docs/).
 
-| Module | What it does |
-|---|---|
-| [**AuditFlow**](https://github.com/Labs64/labs64.io-auditflow) | Publish once, route anywhere, lose nothing |
-| [**Auth Gateway**](https://github.com/Labs64/labs64.io-authproxy) | One authenticated edge for every module |
-| [**Payment Gateway**](https://github.com/Labs64/labs64.io-payment-gateway) | One API across multiple payment providers |
-| [**Checkout**](https://github.com/Labs64/labs64.io-checkout) | Whitelabel checkout and order workflow |
-| [**Customer Portal**](https://github.com/Labs64/labs64.io-customer-portal) | Self-service portal for your customers |
-
-Built on [Commons](https://github.com/Labs64/labs64.io-commons), deployed with [Helm Charts](https://github.com/Labs64/labs64.io-helm-charts), developed in the [Workspace](https://github.com/Labs64/labs64.io-workspace), verified by [Tests](https://github.com/Labs64/labs64.io-tests) and documented in [Docs](https://github.com/Labs64/labs64.io-docs). Also from Labs64: [NetLicensing](https://netlicensing.io) for licensing-as-a-service and [GuideChimp](https://www.labs64.com/guidechimp/) for guided product tours.
+| Module | What it does | Link |
+|---|---|---|
+| **AuditFlow** | Audit-event routing pipeline | [labs64.io-auditflow](https://github.com/Labs64/labs64.io-auditflow) |
+| **API Gateway** | Authenticating, policy-enforcing edge for all modules | [labs64.io-authproxy](https://github.com/Labs64/labs64.io-authproxy) |
+| **Payment Gateway** | One API over multiple payment providers | [labs64.io-payment-gateway](https://github.com/Labs64/labs64.io-payment-gateway) |
+| **Checkout** | Embeddable, brandable checkout | [labs64.io-checkout](https://github.com/Labs64/labs64.io-checkout) |
+| **Customer Portal** | Customer self-service UI | [labs64.io-customer-portal](https://github.com/Labs64/labs64.io-customer-portal) |
+| **Commons** | Shared Java and Python libraries | [labs64.io-commons](https://github.com/Labs64/labs64.io-commons) |
+| **Helm Charts** | Kubernetes deployment for every module | [labs64.io-helm-charts](https://github.com/Labs64/labs64.io-helm-charts) |
+| **Workspace** | Dev container and multi-repo tooling | [labs64.io-workspace](https://github.com/Labs64/labs64.io-workspace) |
+| **Tests** | Cross-module regression suite | [labs64.io-tests](https://github.com/Labs64/labs64.io-tests) |
+| **Docs** | Published documentation | [labs64.io-docs](https://github.com/Labs64/labs64.io-docs) |
+| **NetLicensing** | Licensing-as-a-Service: license and entitlement management | [netlicensing.io](https://netlicensing.io) |
+| **GuideChimp** | Interactive guided product tours | [labs64.com/guidechimp](https://www.labs64.com/guidechimp/) |
 
 ## Contributing
 
-We would love your help. A change to a shared library reaches every service, so tests (and, for the header contract, the shared test vectors) are not optional. Fork the repository, make your change on a branch, run the checks described in [`AGENTS.md`](AGENTS.md) and open a pull request. Not sure whether an idea fits? Open an issue first.
+We would love your help. A change to a shared library reaches every service, so tests (and, for the header contract, shared test vectors) are not optional. Fork the repository, make your change on a branch, run the checks described in [`AGENTS.md`](AGENTS.md) and open a pull request. Not sure whether an idea fits? Open an issue first and we will talk it through; that is a perfectly good way to start.
 
 ## License
 
-Open source under the [Apache License 2.0](LICENSE): use it, change it and ship it commercially.
+Everything in this repository is open source under the [Apache License 2.0](LICENSE): you can use it, change it and ship it commercially. The core of the *Labs64.IO Ecosystem* is free forever; community modules are Apache-2.0 licensed.
 
 ---
 
