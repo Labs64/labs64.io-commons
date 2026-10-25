@@ -52,3 +52,9 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-c
 - Java 17 bytecode target (consumers run 17+). The Spring Boot line and every shared version are declared once, in `labs64io-parent/pom.xml` — never re-pin them in a library or a service.
 - Python ≥ 3.13, no runtime deps, `pyproject.toml` packaging.
 - Versioning: no pom carries a version (`<version>${revision}</version>`, default `0.0.0-SNAPSHOT`). All Java artifacts release together at the version of the GitHub Release tag (`labs64io-release.yml`); never edit a version into a pom. Consumers pin a released `labs64io-parent` — a release build fails on `-SNAPSHOT` inputs. Python is consumed via git+https.
+
+## Working rules for every change
+
+- Judge the change against the **Quality bar for every change** in `labs64.io-workspace/AGENTS.md` (stability of the ecosystem, no regression, no network surprises, performance, HA and resilience, testability, maintainability), and say in the pull request how each applies, or why it does not.
+- Every pull request is assigned to its author and added to the `Labs64.IO` GitHub Project (`labs64.io-workspace/AGENTS.md`, "Pull requests").
+- Before you push: `just test` (Java and Python libraries); `just cerbos` when you touch the authorization assets (`auth-policy-cerbos/`, `OpenApiAuthPreprocessor`), and keep `test-vectors/auth-context-vectors.json` and both implementations in step. Everything here is consumed by every service: a change that is not backward compatible for a released `labs64io-parent` consumer needs an RFC.
