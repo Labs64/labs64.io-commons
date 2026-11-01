@@ -36,8 +36,8 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Security overrides ahead of Spring Boot 4.1.1's BOM (Boot 4.1.2 is expected to absorb
-             them; drop these properties then). Jackson is deliberately moved through its two BOM
+        <!-- Security overrides ahead of Spring Boot's BOM (Boot 4.1.2): drop each property once Boot
+             ships at least that version. Jackson is deliberately moved through its two BOM
              properties rather than by pinning single artifacts: Boot manages the Jackson 3 line
              (jackson-bom) and the Jackson 2 annotations line (jackson-2-bom) as a coordinated
              pair, and overriding tools.jackson.core:jackson-databind alone left
@@ -47,9 +47,12 @@
              CVE-2026-89425/89407/91777/91776/68497, RabbitMQ amqp-client
              CVE-2026-69219/69220/63337/75516. -->
         <!-- renovate: datasource=maven depName=tools.jackson:jackson-bom -->
-        <jackson-bom.version>3.1.7</jackson-bom.version>
+        <jackson-bom.version>3.1.8</jackson-bom.version>
         <!-- renovate: datasource=maven depName=com.fasterxml.jackson:jackson-bom -->
-        <jackson-2-bom.version>2.21.7</jackson-2-bom.version>
+        <jackson-2-bom.version>2.21.8</jackson-2-bom.version>
+        <!-- Spring Boot's own property for the OpenTelemetry BOM: CVE-2026-118259 in opentelemetry-api < 1.67. -->
+        <!-- renovate: datasource=maven depName=io.opentelemetry:opentelemetry-bom -->
+        <opentelemetry.version>1.67.0</opentelemetry.version>
         <!-- renovate: datasource=maven depName=org.apache.tomcat.embed:tomcat-embed-core -->
         <tomcat.version>11.0.27</tomcat.version>
         <!-- renovate: datasource=maven depName=io.netty:netty-bom -->
@@ -73,9 +76,14 @@
         <!-- renovate: datasource=maven depName=org.mapstruct:mapstruct -->
         <mapstruct.version>1.7.0.Beta2</mapstruct.version>
         <!-- renovate: datasource=maven depName=org.openapitools:jackson-databind-nullable -->
-        <openapitools.version>0.2.12</openapitools.version>
+        <openapitools.version>0.2.13</openapitools.version>
         <protobuf-java.version>4.36.2</protobuf-java.version>
-        <springdoc.version>3.1.1</springdoc.version>
+        <springdoc.version>3.2.0</springdoc.version>
+        <!-- Both reach every service through the Cerbos SDK (auth-context starter), which pins older ones;
+             guava < 33.7 carries CVE-2026-102554. Imported/managed in dependencyManagement below, which is
+             also what lets Renovate see them. Guava stays on the -android flavour the SDK ships. -->
+        <grpc.version>1.85.1</grpc.version>
+        <guava.version>33.7.2-android</guava.version>
 
         <!-- Plugins -->
         <!-- renovate: datasource=maven depName=org.codehaus.mojo:build-helper-maven-plugin -->
@@ -88,7 +96,7 @@
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <!-- renovate: datasource=maven depName=org.apache.maven.plugins:maven-dependency-plugin -->
         <maven-dependency-plugin.version>3.11.0</maven-dependency-plugin.version>
-        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
+        <maven-enforcer-plugin.version>3.7.0</maven-enforcer-plugin.version>
         <maven-gpg-plugin.version>3.2.8</maven-gpg-plugin.version>
         <maven-javadoc-plugin.version>3.12.0</maven-javadoc-plugin.version>
         <!-- renovate: datasource=maven depName=org.apache.maven.plugins:maven-shade-plugin -->
@@ -100,6 +108,26 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- The openapi starter pins an older springdoc, so the property alone does not reach it. -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-bom</artifactId>
+                <version>${springdoc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-bom</artifactId>
+                <version>${grpc.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.labs64</groupId>
                 <artifactId>auth-context-core</artifactId>
