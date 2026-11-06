@@ -102,7 +102,7 @@ same source:
 
 - an OpenAPI file enriched with `x-operation-extra-annotation` for OpenAPI Generator templates
 - Cerbos policies for the central PDP (`--cerbos-output`)
-- a routes manifest (`<module>.routes.yaml`) consumed by the Traefik auth-proxy for path matching (`--routes-output`)
+- a routes manifest (`<module>.routes.yaml`) consumed by the Auth Gateway for path matching (`--routes-output`)
 
 Example:
 

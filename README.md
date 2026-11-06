@@ -25,7 +25,7 @@ Services that each re-implement tenant headers, OpenAPI metadata and authorizati
 
 **A good fit if**
 
-- You build Java (Spring Boot) or Python services that sit behind the Labs64.IO API Gateway.
+- You build Java (Spring Boot) or Python services that sit behind the Labs64.IO Auth Gateway.
 - You want your service to parse the trusted identity headers exactly as the rest of the platform does.
 - You generate authorization policies from your OpenAPI contract.
 
