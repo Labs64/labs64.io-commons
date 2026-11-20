@@ -11,7 +11,7 @@ public class Labs64OpenApiProperties {
     private boolean enabled = true;
     private String specLocation;
     private String gatewayPath;
-    private String gatewayDescription = "Via API Gateway (Traefik)";
+    private String gatewayDescription = "Via Auth Gateway (Traefik)";
     private String localPath = "/";
     private String localDescription = "Local Development Server (direct, root-mapped)";
     private final Security security = new Security();
