@@ -37,28 +37,21 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Security overrides ahead of Spring Boot's BOM (Boot 4.1.3): drop each property once Boot
-             ships at least that version. Jackson is deliberately moved through its two BOM
-             properties rather than by pinning single artifacts: Boot manages the Jackson 3 line
-             (jackson-bom) and the Jackson 2 annotations line (jackson-2-bom) as a coordinated
-             pair, and overriding tools.jackson.core:jackson-databind alone left
-             jackson-annotations behind — a request-time NoClassDefFoundError
-             (JsonApplyView) that crash-looped pods. Stay on the Jackson minor line Boot ships
-             (3.1.x with 2.21.x). Fixes: Tomcat CVE-2026-65905/65182/68525, Jackson
-             CVE-2026-89425/89407/91777/91776/68497, RabbitMQ amqp-client
-             CVE-2026-69219/69220/63337/75516. -->
-        <!-- renovate: datasource=maven depName=tools.jackson:jackson-bom -->
-        <jackson-bom.version>3.1.8</jackson-bom.version>
-        <!-- renovate: datasource=maven depName=com.fasterxml.jackson:jackson-bom -->
-        <jackson-2-bom.version>2.21.8</jackson-2-bom.version>
-        <!-- Spring Boot's own property for the OpenTelemetry BOM: CVE-2026-118259 in opentelemetry-api < 1.67. -->
+             ships at least that version. Boot 4.1.3 itself ships the fixed Jackson (3.1.8 with
+             2.21.8), Netty (4.2.20.Final) and RabbitMQ amqp-client (5.37.1), so those are not
+             overridden; Tomcat and OpenTelemetry stay above what Boot ships. Fixes: Tomcat
+             CVE-2026-65905/65182/68525, opentelemetry-api CVE-2026-118259 (before 1.67).
+             Should Jackson need an override again, move it through its two BOM properties,
+             jackson-bom.version (Jackson 3) and jackson-2-bom.version (the Jackson 2 annotations
+             line), rather than pinning single artifacts: Boot manages them as a coordinated pair,
+             and overriding tools.jackson.core:jackson-databind alone left jackson-annotations
+             behind — a request-time NoClassDefFoundError (JsonApplyView) that crash-looped pods.
+             Stay on the Jackson minor line Boot ships. -->
+        <!-- Spring Boot's own property for the OpenTelemetry BOM. -->
         <!-- renovate: datasource=maven depName=io.opentelemetry:opentelemetry-bom -->
         <opentelemetry.version>1.68.0</opentelemetry.version>
         <!-- renovate: datasource=maven depName=org.apache.tomcat.embed:tomcat-embed-core -->
         <tomcat.version>11.0.29</tomcat.version>
-        <!-- renovate: datasource=maven depName=io.netty:netty-bom -->
-        <netty.version>4.2.20.Final</netty.version>
-        <!-- renovate: datasource=maven depName=com.rabbitmq:amqp-client -->
-        <rabbit-amqp-client.version>5.37.1</rabbit-amqp-client.version>
 
         <!-- Third-party versions shared by more than one module. The `renovate:` annotations
              cover properties no dependency in THIS repository references (the modules that
