@@ -262,7 +262,7 @@ public class OpenApiAuthPreprocessor {
     }
 
     /**
-     * The routes manifest the traefik-authproxy loads to map incoming requests
+     * The routes manifest the Auth Gateway loads to map incoming requests
      * to (module, operationId, edge-resource-kind). Carries the full enriched
      * route list plus the module and its gateway {@code basePath} (prefixed onto
      * each route path by the loader).

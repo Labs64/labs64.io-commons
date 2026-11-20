@@ -50,7 +50,7 @@ import io.labs64.authcontext.web.PublicPathMatcher;
  * <p>The collaborators are mocks on purpose: a protected request must be refused
  * before any of them is reached, so what they would have returned is irrelevant.
  *
- * <p>This covers the module-layer PEP only. The gateway edge (traefik-authproxy
+ * <p>This covers the module-layer PEP only. The gateway edge (the Auth Gateway
  * + Cerbos) is a separate layer and needs its own proof.
  */
 public final class ModulePepHarness {

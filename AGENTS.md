@@ -13,7 +13,7 @@ Shared cross-service libraries for the Labs64.IO Ecosystem. Includes: the auth-c
 3. **No Spring Security dependency in the Java starter.** The whole point is header-trust without an in-app security stack.
 4. **No mandatory runtime dependencies in the Python package.** FastAPI/httpx integrations import lazily; the core must stay dependency-free.
 5. **Fail closed.** Non-public paths without a valid user identity return 401. Never weaken this default.
-6. **Value sanitization pattern `^[a-zA-Z0-9_.:-]+$`** must match the ACS (traefik-authproxy) exactly.
+6. **Value sanitization pattern `^[a-zA-Z0-9_.:-]+$`** must match the ACS (Auth Gateway) exactly.
 7. **OpenAPI is the single source of policy.** Cerbos policies are GENERATED
    from each module's `x-labs64.auth` metadata
    by `OpenApiAuthPreprocessor` — never hand-edit generated policy YAML.

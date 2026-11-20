@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
  * stays the single source of truth for the {@link AuthContextFilter}'s
  * public-path decision — no hand-maintained list.
  *
- * <p>Matching mirrors the traefik-authproxy's template semantics exactly so the
+ * <p>Matching mirrors the Auth Gateway's template semantics exactly so the
  * edge PEP and the backend fail-closed guard agree: {@code {param}} matches one
  * path segment ({@code [^/]+}), everything else is literal, a single trailing
  * slash is tolerated, and the method must match (case-insensitive). Paths that
