@@ -9,7 +9,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.2</version>
+        <version>4.1.3</version>
         <relativePath />
     </parent>
 
@@ -36,7 +36,7 @@
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- Security overrides ahead of Spring Boot's BOM (Boot 4.1.2): drop each property once Boot
+        <!-- Security overrides ahead of Spring Boot's BOM (Boot 4.1.3): drop each property once Boot
              ships at least that version. Jackson is deliberately moved through its two BOM
              properties rather than by pinning single artifacts: Boot manages the Jackson 3 line
              (jackson-bom) and the Jackson 2 annotations line (jackson-2-bom) as a coordinated
@@ -52,19 +52,19 @@
         <jackson-2-bom.version>2.21.8</jackson-2-bom.version>
         <!-- Spring Boot's own property for the OpenTelemetry BOM: CVE-2026-118259 in opentelemetry-api < 1.67. -->
         <!-- renovate: datasource=maven depName=io.opentelemetry:opentelemetry-bom -->
-        <opentelemetry.version>1.67.0</opentelemetry.version>
+        <opentelemetry.version>1.68.0</opentelemetry.version>
         <!-- renovate: datasource=maven depName=org.apache.tomcat.embed:tomcat-embed-core -->
-        <tomcat.version>11.0.27</tomcat.version>
+        <tomcat.version>11.0.29</tomcat.version>
         <!-- renovate: datasource=maven depName=io.netty:netty-bom -->
-        <netty.version>4.2.19.Final</netty.version>
+        <netty.version>4.2.20.Final</netty.version>
         <!-- renovate: datasource=maven depName=com.rabbitmq:amqp-client -->
-        <rabbit-amqp-client.version>5.37.0</rabbit-amqp-client.version>
+        <rabbit-amqp-client.version>5.37.1</rabbit-amqp-client.version>
 
         <!-- Third-party versions shared by more than one module. The `renovate:` annotations
              cover properties no dependency in THIS repository references (the modules that
              inherit this POM use them), which Renovate's Maven manager cannot otherwise see. -->
         <!-- renovate: datasource=maven depName=org.apache.commons:commons-lang3 -->
-        <commons-lang3.version>3.21.0</commons-lang3.version>
+        <commons-lang3.version>3.22.0</commons-lang3.version>
         <!-- renovate: datasource=maven depName=com.fasterxml.jackson.datatype:jackson-datatype-jsr310 -->
         <jackson-datatype.version>2.22.4</jackson-datatype.version>
         <!-- renovate: datasource=maven depName=net.logstash.logback:logstash-logback-encoder -->
@@ -87,10 +87,10 @@
 
         <!-- Plugins -->
         <!-- renovate: datasource=maven depName=org.codehaus.mojo:build-helper-maven-plugin -->
-        <build-helper-maven-plugin.version>3.6.2</build-helper-maven-plugin.version>
+        <build-helper-maven-plugin.version>3.8.0</build-helper-maven-plugin.version>
         <central-publishing-maven-plugin.version>0.12.0</central-publishing-maven-plugin.version>
         <!-- renovate: datasource=maven depName=org.codehaus.mojo:exec-maven-plugin -->
-        <exec-maven-plugin.version>3.6.4</exec-maven-plugin.version>
+        <exec-maven-plugin.version>3.7.0</exec-maven-plugin.version>
         <flatten-maven-plugin.version>1.8.0</flatten-maven-plugin.version>
         <!-- renovate: datasource=maven depName=org.apache.maven.plugins:maven-compiler-plugin -->
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
@@ -103,7 +103,7 @@
         <maven-shade-plugin.version>3.6.2</maven-shade-plugin.version>
         <maven-source-plugin.version>3.4.0</maven-source-plugin.version>
         <!-- renovate: datasource=maven depName=org.openapitools:openapi-generator-maven-plugin -->
-        <openapi-generator-maven-plugin.version>7.26.0</openapi-generator-maven-plugin.version>
+        <openapi-generator-maven-plugin.version>7.27.0</openapi-generator-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
